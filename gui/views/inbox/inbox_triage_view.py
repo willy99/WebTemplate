@@ -11,7 +11,6 @@ import os
 import regex as re
 from gui.tools.ui_components import confirm_delete_dialog
 from service.processing.parsers.ParserFactory import ParserFactory
-from domain.person import Person
 
 # Дозволені розширення файлів для завантаження
 _ALLOWED_EXTENSIONS = {'.doc', '.docx', '.pdf', '.txt', '.jpg', '.jpeg', '.png', '.xlsx', '.xls'}

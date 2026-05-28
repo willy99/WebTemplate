@@ -7,7 +7,6 @@ from typing import Any, Tuple, Dict, Optional, Union
 
 from config import EXCEL_DATE_FORMAT
 from dics.deserter_xls_dic import NA, UA_QUOTE
-from domain.person_key import PersonKey
 from service.constants import DB_DATE_FORMAT
 import sys
 import subprocess
@@ -189,19 +188,6 @@ def get_strint_fromfloat(value, default = None) -> str:
     except:
         value = str(value).strip() if value else default
     return value
-
-# 029384902_ІМЯ Прізвище по-батькові_24.02.1979_А0224
-def get_person_key_from_str(glued_key: str) -> PersonKey:
-    key = PersonKey(rnokpp=None, name=None, des_date=None, mil_unit=None)
-    if not glued_key: return key
-    spl = glued_key.split("_")
-    key.rnokpp = spl[0]
-    key.name = spl[1]
-    key.des_date = spl[2]
-    if len(spl) > 3:
-        key.mil_unit = spl[3]
-    return key
-
 
 def to_genitive_title(title: str) -> str:
     """Перетворює військове звання у родовий відмінок (кого/чого)."""

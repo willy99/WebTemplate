@@ -131,67 +131,9 @@ CHECK_INBOX_EVERY_SEC: Final[float] = 60.0 # перевіряти інбокс �
 
 # Основна функціональність
 SIGNAL_BOT: Final[bool] = get_env_bool("SIGNAL_BOT", False)
-PROCESS_DOC: Final[bool] = get_env_bool("PROCESS_DOC", True)
 DAILY_BACKUPS: Final[bool] = get_env_bool("DAILY_BACKUPS", True) # do daily backups of excel db
 SIGNAL_WORKFLOW_STRATEGY: Final[str] = 'COPY' # may be COPY or FULL (Archive + Excel)
 
-DESERTER_TAB_NAME : Final = "А0224"
-DESERTER_RESERVE_TAB_NAME : Final = "А7018"
-
-# Шляхи до папок
-'''
-if is_win():
-    DOC_DIR: Final[str] = "C:/tmp"
-
-    ROOT_STORAGE_PATH: Final = fr"\\{NET_SERVER_IP}"
-    DOCUMENT_STORAGE_PATH: Final = fr"\\{NET_SERVER_IP}\exchange\ДД"
-    ERDR_DOCUMENT_STORAGE_PATH: Final = fr"\\{NET_SERVER_IP}\exchange\ERDR\ЄРДР-и"
-    BACKUP_STORAGE_PATH: Final = fr"\\{NET_SERVER_IP}\exchange\projekt407\backups"
-    INBOX_DIR_PATH: Final[str] = fr"\\{NET_SERVER_IP}\exchange\ДД\inbox"
-    OUTBOX_DIR_PATH: Final[str] = fr"\\{NET_SERVER_IP}\exchange\ДД\outbox"
-    CACHE_FILE_PATH: Final = fr"\\{NET_SERVER_IP}\exchange\\ДД\file_cache.json"
-    ERDR_CACHE_FILE_PATH = fr"\\{NET_SERVER_IP}\exchange\ERDR\erdr_file_cacher.json"
-
-    CACHE_FOLDER_PATH: Final = fr"\\{NET_SERVER_IP}\exchange\ДД"
-    INBOX_LOCAL_DIR_PATH = f"c:/exchange/дд/inbox"
-    OUTBOX_LOCAL_DIR_PATH = f"c:/exchange/дд/outbox"
-    REPORT_DAILY_DESERTION = f"c:/exchange/projekt407/project/zvit"
-
-    TMP_DIR: Final = "C:/temp" # Створи цю папку вручну!
-    if not os.path.exists(TMP_DIR):
-        os.makedirs(TMP_DIR, exist_ok=True)
-
-    # Шлях до сокета
-    SOCKET_PATH : Final = "c:/temp/signal-bot.sock" # для мак
-    TCP_HOST : Final = '127.0.0.1'
-    TCP_PORT : Final = 1234
-
-    # Налаштування бази даних
-    DB_DIR = "C:/work/WebTemplate/signal-data"
-    if not os.path.exists(DB_DIR):
-        os.makedirs(DB_DIR, exist_ok=True)
-    DB_NAME = os.path.join(DB_DIR, "bot_data.db")
-    # DB_NAME = os.path.join(os.path.expanduser("c:/work/WebTemplate/signal-data"), "bot_data.db")
-    MAX_QUERY_RESULTS = 50
-    RECORDS_PER_PAGE = 10
-
-    # ML
-    BASE_WORK_DIR = "C:/work/WebTemplate/signal-data"
-
-    ML_MODEL_JSON = os.path.join(BASE_WORK_DIR, "training_data.jsonl")
-    ML_LOCAL_DESERTER_XLSX : Final = os.path.join(BASE_WORK_DIR, "А0224 СЗЧ 2022-2025_copy_pasha.xlsx")
-    ML_MODEL_PATH = "C:/work/WebTemplate/service/ml/output_model/model-best"
-
-    # Шлях до системної папки signal-cli (де лежать вхідні файли)
-
-    # Signal Attachments (Windows версія)
-    # Якщо використовуєш WSL або Docker — лишай як було.
-    # Якщо чистий Windows — вкажи реальний шлях, куди signal-cli складає файли.
-    SIGNAL_ATTACHMENTS_DIR : Final = "C:/work/WebTemplate/attachments"
-
-    PACKAGES_ANTIWORD_HOME_PATH="C:/work/install/antiword"
-'''
-#else:
 if not is_win():
     DOC_DIR : Final[str] = "/tmp/webtemplate/дд"
 

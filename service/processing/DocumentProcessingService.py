@@ -36,12 +36,6 @@ class DocumentProcessingService:
         try:
             with StorageFactory.create_client(config.DOCUMENT_STORAGE_PATH, self.log_manager) as client:
                 destination_file = f"{target_path}{client.separator}{original_filename}"
-
-                if config.PROCESS_DOC:
-                    client.make_dirs(target_path)
-                    client.copy_file(source_file_path, destination_file)
-                    self.log_manager.debug(f"📁 Файл впорядковано: {destination_file}")
-
                 return destination_file
         except Exception as e:
             self.log_manager.error(f"❌ Помилка архівації документа: {e}")
