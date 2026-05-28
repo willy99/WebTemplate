@@ -1,0 +1,140 @@
+import config
+from typing import List
+from domain.sys_config import SysConfig
+import regex as re
+
+class ConfigService:
+    """
+    Сервіс системних налаштувань.
+    Використовує переданий екземпляр MyDataBase — власних з'єднань не відкриває.
+    """
+
+    DEFAULT_SETTINGS = [
+        # Основні
+        SysConfig(key_name='PROCESS_DOC',       category='Основні', value='True',  value_type='bool', description='Копіювати документ з Signal у цільову папку'),
+        SysConfig(key_name='DAILY_BACKUPS',      category='Основні', value='True',  value_type='bool', description='Робити щоденні бекапи БД та Excel'),
+        # SysConfig(key_name='SIGNAL_WORKFLOW_STRATEGY', category='Основні', value='COPY', value_type='str', description='Стратегія обробки атачментів з сігналу: COPY - копіювання в inbox, FULL - повна обробка, архівація і Excel'),
+
+        # Шляхи
+        SysConfig(key_name='DOC_DIR',            category='Шляхи', value='/tmp/ДД',               value_type='str', description='Головна папка для документів'),
+        SysConfig(key_name='BACKUP_DIR',         category='Шляхи', value='/tmp/ДД/backups',value_type='str', description='Папка для бекапів'),
+        SysConfig(key_name='FOLDER_YEAR_FORMAT', category='Шляхи', value='%Y',                         value_type='str', description='Частина (рік) папки архівів'),
+        SysConfig(key_name='FOLDER_MONTH_FORMAT',category='Шляхи', value='%m',                         value_type='str', description='Частина (місяць) папки архівів'),
+        SysConfig(key_name='FOLDER_DAY_FORMAT',  category='Шляхи', value='%d.%m.%Y',                   value_type='str', description='Формат назви папки архівів. Приклад - %d.%m.%Y'),
+        SysConfig(key_name='TMP_DIR',            category='Шляхи', value='~/tmp/',                     value_type='str', description='Локальна папка для тимчасового сміття'),
+        SysConfig(key_name='SIGNAL_ATTACHMENTS_DIR', category='Шляхи', value='c:/tmp/signal', value_type='str', description='Тимчасова папка куди зберігати аттачменти від signal'),
+
+
+        # Час та Логіка
+        SysConfig(key_name='DAY_ROLLOVER_HOUR',      category='Час та Логіка', value='16', value_type='int', description='Година (0-23) переходу на наступний робочий день', validation_rule='min:0|max:23'),
+        SysConfig(key_name='BACKUP_KEEP_DAYS',       category='Час та Логіка', value='30', value_type='int', description='Скільки днів зберігати старі бекапи',              validation_rule='min:1|max:365'),
+        SysConfig(key_name='CHECK_INBOX_EVERY_SEC',  category='Час та Логіка', value='60', value_type='int', description='Інтервал перевірки інбоксу (сек)',                  validation_rule='min:10|max:3600'),
+
+        # Технічні
+        SysConfig(key_name='LOG_MONITORING_MAX_LINES', category='Технічні', value='1000',          value_type='int', description='Максимальна кількість рядків у логах',    validation_rule='min:100|max:5000'),
+        SysConfig(key_name='SOCKET_PATH',              category='Технічні', value='/tmp/signal-bot.sock', value_type='str', description='Шлях для сокету сігнала'),
+        SysConfig(key_name='TCP_HOST',                 category='Технічні', value='127.0.0.1',     value_type='str', description='Хост для сокету сігнала'),
+        SysConfig(key_name='TCP_PORT',                 category='Технічні', value='1234',          value_type='int', description='Порт для сокету сігнала',                  validation_rule='min:1|max:65535'),
+
+        # Безпека
+        SysConfig(key_name='SECURITY_SESSION_TIMEOUT',       category='Безпека', value='3600',  value_type='int', description='Час життя сесії (сек). 3600 = 1 година',               validation_rule='min:300|max:86400'),
+        SysConfig(key_name='SECURITY_MAX_ATTEMPTS',          category='Безпека', value='5',     value_type='int', description='Макс. кількість невдалих спроб входу до блокування',    validation_rule='min:3|max:20'),
+        SysConfig(key_name='SECURITY_LOCKOUT_DURATION_MINS', category='Безпека', value='15',    value_type='int', description='Тривалість блокування акаунту (хвилини)',               validation_rule='min:5|max:120'),
+
+        # UI
+        SysConfig(key_name='UI_DATE_FORMAT',    category='UI', value='DD.MM.YYYY', value_type='str', description='Формат дат для відображення в UI'),
+        SysConfig(key_name='MAX_QUERY_RESULTS', category='UI', value='50',         value_type='int', description='Обмеження кількості записів на сторінках без пейджінгу', validation_rule='min:5|max:500'),
+        SysConfig(key_name='RECORDS_PER_PAGE',  category='UI', value='10',         value_type='int', description='Кількість записів на сторінку з пейджінгом',            validation_rule='min:5|max:500'),
+    ]
+
+    def __init__(self, db):
+        """
+        Приймає екземпляр MyDataBase.
+        Власних з'єднань з SQLite не відкриває — всі запити йдуть через db.
+        """
+        self.db = db
+
+    def sync_defaults(self) -> None:
+        """
+        Додає нові параметри та оновлює метадані існуючих.
+        Значення (value) вже збережених параметрів не змінює.
+        """
+        existing_rows = self.db.__execute_fetchall__("SELECT key_name FROM sys_config")
+        existing_keys = {row['key_name'] for row in existing_rows}
+
+        for setting in self.DEFAULT_SETTINGS:
+            if setting.key_name not in existing_keys:
+                # Новий параметр — додаємо повністю
+                self.db.__execute_query__(
+                    """
+                    INSERT INTO sys_config (category, key_name, value, value_type, description, validation_rule)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (setting.category, setting.key_name, setting.value,
+                     setting.value_type, setting.description, setting.validation_rule)
+                )
+            else:
+                # Параметр вже є — оновлюємо лише метадані, value не чіпаємо
+                self.db.__execute_query__(
+                    """
+                    UPDATE sys_config
+                    SET category = ?, description = ?, validation_rule = ?, value_type = ?
+                    WHERE key_name = ?
+                    """,
+                    (setting.category, setting.description,
+                     setting.validation_rule, setting.value_type, setting.key_name)
+                )
+
+    def get_all(self) -> List[SysConfig]:
+        """Повертає всі налаштування у вигляді списку SysConfig."""
+        rows = self.db.__execute_fetchall__(
+            "SELECT * FROM sys_config ORDER BY category, id"
+        )
+        return [SysConfig(**dict(row)) for row in rows]
+
+    def update_value(self, key_name: str, new_value: str) -> bool:
+        # Знаходимо метадані для цього ключа
+        setting = next((s for s in self.DEFAULT_SETTINGS if s.key_name == key_name), None)
+        if not setting:
+            raise ValueError(f"Невідомий ключ конфігурації: {key_name}")
+        # Server-side validation
+        self._validate(setting, new_value)
+
+        """Оновлює значення одного параметра з UI."""
+        result = self.db.__execute_query__(
+            "UPDATE sys_config SET value = ? WHERE key_name = ?",
+            (str(new_value), key_name)
+        )
+        # __execute_query__ повертає lastrowid; для UPDATE перевіряємо інакше
+        # (lastrowid при UPDATE може бути 0, але операція пройшла якщо не None)
+        return result is not None
+
+    def apply_to_runtime(self) -> None:
+        """Перезаписує змінні модуля config значеннями з бази (в пам'яті)."""
+        for conf in self.get_all():
+            setattr(config, conf.key_name, conf.get_typed_value())
+
+    def _validate(self, setting: SysConfig, value: str):
+        rule = setting.validation_rule or ''
+        if not rule:
+            return
+
+        for part in rule.split('|'):
+            try:
+                if part.startswith('min:'):
+                    if float(value) < float(part[4:]):
+                        raise ValueError(f"Параметр {setting.key_name}: мінімальне значення {part[4:]}")
+
+                elif part.startswith('max:'):  # ДОДАЄМО MAX
+                    if float(value) > float(part[4:]):
+                        raise ValueError(f"Параметр {setting.key_name}: максимальне значення {part[4:]}")
+
+                elif part.startswith('regex:'):
+                    if not re.match(part[6:], value):
+                        raise ValueError(f"Параметр {setting.key_name}: невірний формат (очікується regex: {part[6:]})")
+
+            except ValueError as e:
+                # Якщо це наша помилка — прокидаємо далі
+                if "Параметр" in str(e): raise e
+                # Якщо це помилка конвертації float(value)
+                raise ValueError(f"Параметр {setting.key_name}: очікується числове значення")
