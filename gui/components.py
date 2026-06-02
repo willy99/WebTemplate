@@ -231,7 +231,7 @@ class AppMenu:
                 # Замість 'lg:hidden' використовуємо 'lt-md' (видимо тільки на мобільних)
                 ui.button(icon='menu', on_click=mobile_drawer.toggle).props('flat round color="white"').classes('lt-md ml-1')
 
-        inject_watermark()
+        # inject_watermark()
 
 
 def inject_watermark():

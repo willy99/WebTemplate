@@ -1,3 +1,4 @@
+import json
 from nicegui import ui
 from gui.services.auth_manager import AuthManager
 from dics.security_config import *
@@ -6,6 +7,8 @@ from dics.security_config import *
 def render_users_page(auth_manager: AuthManager):
     ui.label('Керування користувачами').classes('w-full text-center text-3xl font-bold mb-8')
 
+    roles = auth_manager.get_available_roles()
+
     # --- ДІАЛОГ ДОДАВАННЯ КОРИСТУВАЧА ---
     with ui.dialog() as add_dialog, ui.card().classes('w-96'):
         ui.label('Новий користувач').classes('text-xl font-bold mb-4')
@@ -13,7 +16,7 @@ def render_users_page(auth_manager: AuthManager):
         new_username = ui.input('Логін').classes('w-full')
         new_fullname = ui.input('ПІБ').classes('w-full')
         new_password = ui.input('Пароль').classes('w-full').props('type=password')
-        new_role = ui.select(AVAILABLE_ROLES, label='Роль', value='Гість').classes('w-full mb-4')
+        new_role = ui.select(roles, label='Роль', value='Гість').classes('w-full mb-4')
 
         def save_new_user():
             if not new_username.value or not new_password.value:
@@ -108,6 +111,7 @@ def render_users_page(auth_manager: AuthManager):
         def refresh_table():
             table_container.clear()
             users = auth_manager.get_all_users()
+            roles_json = json.dumps(auth_manager.get_available_roles())
 
             with table_container:
                 columns = [
@@ -125,9 +129,9 @@ def render_users_page(auth_manager: AuthManager):
                 # Кастомний слот для колонки "Роль"
                 table.add_slot('body-cell-role', f'''
                     <q-td :props="props">
-                        <q-select 
-                            :model-value="props.row.role" 
-                            :options="{AVAILABLE_ROLES}" 
+                        <q-select
+                            :model-value="props.row.role"
+                            :options='{roles_json}'
                             dense options-dense borderless
                             @update:model-value="val => {{ props.row.role = val; $parent.$emit('role_changed', props.row) }}"
                         />

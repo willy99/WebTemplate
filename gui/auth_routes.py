@@ -1,6 +1,8 @@
 from nicegui import ui, app, run
 from functools import wraps
 import asyncio
+import logging
+import regex as re
 
 import config
 from config import PROJECT_TITLE
@@ -9,6 +11,19 @@ from gui.services.auth_manager import AuthManager
 from gui.services.request_context import RequestContext
 import time
 from fastapi import Request
+
+_logger = logging.getLogger(__name__)
+
+
+def _validate_password_strength(pw: str) -> str | None:
+    """Returns an error message if the password is too weak, otherwise None."""
+    if len(pw) < 8:
+        return 'Пароль має бути не менше 8 символів'
+    if not re.search(r'[A-Z]', pw):
+        return 'Пароль має містити хоча б одну велику літеру'
+    if not re.search(r'[0-9]', pw):
+        return 'Пароль має містити хоча б одну цифру'
+    return None
 
 def create_login_page(auth_manager, user_ctrl, log_manager):
     log_manager = log_manager
@@ -41,7 +56,7 @@ def create_login_page(auth_manager, user_ctrl, log_manager):
 
                     async def try_login():
                         if auth_manager.is_ip_blocked(client_ip):
-                            ui.notify('Забагато невдалих спроб з вашої адреси. Зачекайте 5 хвилин.', type='negative')
+                            ui.notify(f'Забагато невдалих спроб з вашої адреси. Зачекайте {config.SECURITY_LOCKOUT_DURATION_MINS} хвилин.', type='negative')
                             return
                         u, p = username.value.strip(), password.value.strip()
                         if not u or not p: return
@@ -137,8 +152,9 @@ def create_login_page(auth_manager, user_ctrl, log_manager):
                         new_pw = new_password.value.strip()
                         confirm_pw = confirm_password.value.strip()
 
-                        if len(new_pw) < 8:
-                            ui.notify('Пароль має бути не менше 8 символів', type='warning')
+                        strength_error = _validate_password_strength(new_pw)
+                        if strength_error:
+                            ui.notify(strength_error, type='warning')
                             return
                         if new_pw != confirm_pw:
                             ui.notify('Паролі не співпадають', type='negative')
@@ -205,7 +221,7 @@ def require_access(auth_manager, module_name, action=PERM_READ):
                     return
 
             if not auth_manager.has_access(module_name, action):
-                print(f"DEBUG: Access denied for {module_name}:{action}")  # Подивитись в консоль
+                _logger.warning("Access denied: module=%s action=%s", module_name, action)
                 ui.notify('У вас немає доступу до цієї сторінки', type='negative')
                 ui.navigate.to('/')
                 return

@@ -13,7 +13,7 @@ class ConfigService:
         # Основні
         SysConfig(key_name='PROCESS_DOC',       category='Основні', value='True',  value_type='bool', description='Копіювати документ з Signal у цільову папку'),
         SysConfig(key_name='DAILY_BACKUPS',      category='Основні', value='True',  value_type='bool', description='Робити щоденні бекапи БД та Excel'),
-        # SysConfig(key_name='SIGNAL_WORKFLOW_STRATEGY', category='Основні', value='COPY', value_type='str', description='Стратегія обробки атачментів з сігналу: COPY - копіювання в inbox, FULL - повна обробка, архівація і Excel'),
+        SysConfig(key_name='SIGNAL_WORKFLOW_STRATEGY', category='Основні', value='COPY', value_type='str', description='Стратегія обробки атачментів з сігналу: COPY - копіювання в inbox, FULL - повна обробка'),
 
         # Шляхи
         SysConfig(key_name='DOC_DIR',            category='Шляхи', value='/tmp/ДД',               value_type='str', description='Головна папка для документів'),

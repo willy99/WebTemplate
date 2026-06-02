@@ -4,6 +4,8 @@ from dics.security_config import *
 def render_permissions_page(auth_manager):
     ui.label('Керування правами доступу').classes('w-full text-center text-3xl font-bold mb-8')
 
+    roles = auth_manager.get_available_roles()
+
     # Стан для збереження вибраної ролі та її прав
     state = {
         'selected_role': None,
@@ -20,7 +22,7 @@ def render_permissions_page(auth_manager):
             # Вибір ролі
             with ui.row().classes('w-full items-center gap-4 mb-6'):
                 ui.label('1. Оберіть роль для налаштування:').classes('text-lg font-medium text-gray-700')
-                role_select = ui.select(AVAILABLE_ROLES, label='Роль', on_change=lambda e: load_role_permissions(e)).classes('w-64')
+                role_select = ui.select(roles, label='Роль', on_change=lambda e: load_role_permissions(e)).classes('w-64')
 
             # Контейнер для таблиці галочок (спочатку прихований/порожній)
             perms_container = ui.column().classes('w-full gap-2')

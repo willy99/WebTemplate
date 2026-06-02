@@ -23,3 +23,16 @@ CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON audit_logs(timestamp);
 CREATE INDEX IF NOT EXISTS idx_logs_username ON audit_logs(username);
 CREATE INDEX IF NOT EXISTS idx_logs_domain ON audit_logs(domain);
 CREATE INDEX IF NOT EXISTS idx_logs_entity_id ON audit_logs(entity_id);
+
+-- Індекс для персистентного IP rate-limiting
+CREATE INDEX IF NOT EXISTS idx_login_attempts_ip_time ON login_attempts(ip_address, attempted_at);
+
+-- Таблиця версій схеми для відстеження міграцій
+CREATE TABLE IF NOT EXISTS schema_version (
+    version INTEGER PRIMARY KEY,
+    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    description TEXT
+);
+
+INSERT OR IGNORE INTO schema_version (version, description) VALUES (1, 'Initial schema');
+INSERT OR IGNORE INTO schema_version (version, description) VALUES (2, 'Add roles table, login_attempts table, schema_version table');

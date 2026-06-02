@@ -54,7 +54,7 @@ async def bot_worker(workflow: MyWorkFlow) -> None:
 
 
 def parse_parameters() -> None:
-    parser = argparse.ArgumentParser(description="Система Тревел-Блогери")
+    parser = argparse.ArgumentParser(description="Web Template")
     parser.add_argument('--dev',  action='store_true', help='Режим розробки (порт 8081)')
     parser.add_argument('--prod', action='store_true', help='Бойовий режим (порт 8080)')
     args = parser.parse_args()

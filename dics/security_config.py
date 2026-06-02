@@ -1,7 +1,4 @@
-# todo - викинути це в базьонку
 from typing import Final
-
-AVAILABLE_ROLES:Final[list[str]] = ['admin', 'Командір', 'Офіс', 'Бджілка', 'Гість']
 
 PERM_READ = 'read'
 PERM_EDIT = 'write'

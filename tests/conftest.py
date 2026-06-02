@@ -63,7 +63,7 @@ def mock_db():
     try:
         db.__execute_sql__("DELETE FROM " + DB_TABLE_TASK)
         db.__execute_sql__("DELETE FROM users")
-    except:
+    except Exception:
         pass
     print("\n🧹 Тестова база очищена")
 

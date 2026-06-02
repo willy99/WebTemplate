@@ -1,23 +1,21 @@
 from typing import Optional
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from dics.security_config import MODULE_ADMIN, MODULE_SEARCH
+from dics.security_config import MODULE_ADMIN, MODULE_SEARCH, MODULE_TASK, MODULE_REPORT_GENERAL
 from domain.user import User
 import uuid
 import secrets
 import string
 from datetime import datetime, timedelta
 import config
-from service.constants import DB_TABLE_USER
+from service.constants import DB_TABLE_USER, DB_TABLE_ROLES
 import asyncio
-import time
 
 class AuthService:
 
     def __init__(self, db, user_service):
         self.db = db
         self.user_service = user_service
-        self.ip_attempts = {}
 
     async def authenticate(self, username: str, password: str) -> Optional[User]:
         """Перевірка логіну/пароля."""
@@ -78,17 +76,11 @@ class AuthService:
         При першому вході система примусово вимагає змінити пароль.
         """
         if not self.user_service.get_user_by_username('admin'):
-            # Генеруємо криптографічно безпечний тимчасовий пароль
             alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(16))
 
             self.user_service.create_user('admin', temp_password, 'admin', 'Адміністратор',
                              force_password_change=True)
-
-            # Надаємо максимальні права на існуючі модулі
-            modules = [MODULE_SEARCH, MODULE_ADMIN]
-            for mod in modules:
-                self.set_permissions('admin', mod, can_read=1, can_write=1, can_delete=1)
 
             print("=" * 60)
             print("✅  ПЕРШИЙ ЗАПУСК: створено адміністратора")
@@ -97,6 +89,39 @@ class AuthService:
             print("⚠️   Збережіть цей пароль! Після входу система")
             print("     одразу вимагатиме його замінити на власний.")
             print("=" * 60)
+
+    def seed_default_role_permissions(self):
+        """
+        Inserts initial permissions for all default roles using INSERT OR IGNORE,
+        so manual changes made via the admin panel are never overwritten.
+        Safe to call on every startup.
+        """
+        defaults = [
+            ('admin',    MODULE_SEARCH,          1, 1, 1),
+            ('admin',    MODULE_ADMIN,            1, 1, 1),
+            ('admin',    MODULE_TASK,             1, 1, 1),
+            ('admin',    MODULE_REPORT_GENERAL,   1, 1, 1),
+            ('Командір', MODULE_SEARCH,           1, 0, 0),
+            ('Командір', MODULE_TASK,             1, 1, 0),
+            ('Командір', MODULE_REPORT_GENERAL,   1, 0, 0),
+            ('Офіс',     MODULE_SEARCH,           1, 0, 0),
+            ('Офіс',     MODULE_TASK,             1, 1, 0),
+            ('Бджілка',  MODULE_SEARCH,           1, 0, 0),
+            ('Гість',    MODULE_SEARCH,           1, 0, 0),
+        ]
+        query = '''
+            INSERT OR IGNORE INTO role_permissions (role, module_name, can_read, can_write, can_delete)
+            VALUES (?, ?, ?, ?, ?)
+        '''
+        for row in defaults:
+            self.db.__execute_query__(query, row)
+
+    def get_roles(self) -> list[str]:
+        """Returns role names from the DB. Falls back to hardcoded list on error."""
+        rows = self.db.__execute_fetchall__(f"SELECT name FROM {DB_TABLE_ROLES} ORDER BY name")
+        if rows:
+            return [row['name'] for row in rows]
+        return ['admin', 'Командір', 'Офіс', 'Бджілка', 'Гість']
 
     def set_permissions(self, role: str, module_name: str, can_read: int, can_write: int, can_delete: int):
 
@@ -137,37 +162,20 @@ class AuthService:
         self.db.__execute_query__(query, (user_id,))
 
 
-    def check_ip_rate_limit(self, ip_address):
-        now = time.time()
-        attempts = self.ip_attempts.get(ip_address, [])
-        # Залишаємо спроби тільки за останні 5 хвилин
-        attempts = [t for t in attempts if now - t < 300]
-        self.ip_attempts[ip_address] = attempts
-
-        if len(attempts) > 20:  # Наприклад, 20 спроб за 5 хв з одного IP
-            return False
-
-        attempts.append(now)
-        return True
-
-
     def is_ip_blocked(self, ip: str, max_attempts=config.SECURITY_MAX_ATTEMPTS, window_seconds=300) -> bool:
-        """Перевіряє, чи не перевищив IP ліміт спроб за вказаний час (5 хв)."""
-        now = time.time()
-
-        # Отримуємо список таймстемпів для цього IP
-        attempts = self.ip_attempts.get(ip, [])
-
-        # Очищаємо старі спроби (старші за window_seconds)
-        attempts = [t for t in attempts if now - t < window_seconds]
-        self.ip_attempts[ip] = attempts
-
-        return len(attempts) >= max_attempts
-
+        """Checks whether an IP has exceeded the failed-login limit within the rolling window."""
+        row = self.db.__execute_fetch__(
+            "SELECT COUNT(*) AS cnt FROM login_attempts WHERE ip_address = ? AND attempted_at > datetime('now', ?)",
+            (ip, f'-{window_seconds} seconds')
+        )
+        return bool(row and row['cnt'] >= max_attempts)
 
     def register_ip_attempt(self, ip: str):
-        """Фіксуємо нову невдалу спробу для IP."""
-        now = time.time()
-        if ip not in self.ip_attempts:
-            self.ip_attempts[ip] = []
-        self.ip_attempts[ip].append(now)
+        """Records a failed login attempt for an IP and prunes records outside the window."""
+        self.db.__execute_query__(
+            "DELETE FROM login_attempts WHERE attempted_at < datetime('now', '-300 seconds')"
+        )
+        self.db.__execute_query__(
+            "INSERT INTO login_attempts (ip_address) VALUES (?)",
+            (ip,)
+        )

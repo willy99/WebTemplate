@@ -81,7 +81,7 @@ if is_win():
 else:
     _validate_env_mac()
 
-PROJECT_TITLE = "Тревел-Блогери"
+PROJECT_TITLE = "Web Template"
 IS_DEV = '--dev' in sys.argv
 
 NET_SERVER_IP = os.getenv("NET_SERVER_IP", "192.168.0.53")
@@ -129,34 +129,51 @@ EXCEL_SUPPORT_COLOR: Final[str] = 'e8fffe'
 
 CHECK_INBOX_EVERY_SEC: Final[float] = 60.0 # перевіряти інбокс кожні ? секунд
 
+UI_SSL_KEYFILE: str | None = os.getenv("UI_SSL_KEYFILE")
+UI_SSL_CERTFILE: str | None = os.getenv("UI_SSL_CERTFILE")
+
 # Основна функціональність
 SIGNAL_BOT: Final[bool] = get_env_bool("SIGNAL_BOT", False)
-DAILY_BACKUPS: Final[bool] = get_env_bool("DAILY_BACKUPS", True) # do daily backups of excel db
-SIGNAL_WORKFLOW_STRATEGY: Final[str] = 'COPY' # may be COPY or FULL (Archive + Excel)
+DAILY_BACKUPS: Final[bool] = get_env_bool("DAILY_BACKUPS", True)
+SIGNAL_WORKFLOW_STRATEGY: str = os.getenv("SIGNAL_WORKFLOW_STRATEGY", "COPY")  # COPY or FULL
 
-if not is_win():
-    DOC_DIR : Final[str] = "/tmp/webtemplate/дд"
-
-    # ROOT_STORAGE_PATH: Final = f"/tmp"
-    DOCUMENT_STORAGE_PATH: Final = f"/tmp/webtemplate/дд"
-    BACKUP_STORAGE_PATH: Final = f"/tmp/webtemplate/дд/backups"
-    INBOX_DIR_PATH: Final[str] = f"/tmp/webtemplate/дд/inbox"
-    OUTBOX_DIR_PATH: Final[str] = f"/tmp/webtemplate/дд/outbox"
+if is_win():
+    DOC_DIR: Final[str] = os.getenv("DOC_DIR", "C:/tmp/webtemplate/dd")
+    DOCUMENT_STORAGE_PATH: Final = DOC_DIR
+    BACKUP_STORAGE_PATH: Final = f"{DOC_DIR}/backups"
+    INBOX_DIR_PATH: Final[str] = f"{DOC_DIR}/inbox"
+    OUTBOX_DIR_PATH: Final[str] = f"{DOC_DIR}/outbox"
     INBOX_LOCAL_DIR_PATH = f"{DOC_DIR}/inbox"
     OUTBOX_LOCAL_DIR_PATH = f"{DOC_DIR}/outbox"
 
+    SOCKET_PATH: Final = None  # Unix sockets not supported on Windows
+    TCP_HOST: Final = '127.0.0.1'
+    TCP_PORT: Final = 1234
 
-    # Шлях до сокета
-    SOCKET_PATH : Final = "/tmp/signal-bot.sock" # для мак
-    TCP_HOST : Final = '127.0.0.1'
-    TCP_PORT : Final = 1234
-
-    # Налаштування бази даних
     DB_NAME = os.path.join(os.path.expanduser("~/work/WebTemplate/signal-data"), "bot_data.db")
     MAX_QUERY_RESULTS = 50
     RECORDS_PER_PAGE = 10
 
-    # Шлях до системної папки signal-cli (де лежать вхідні файли)
-    SIGNAL_ATTACHMENTS_DIR : Final = os.path.expanduser("~/.local/share/signal-cli/attachments/")
+    SIGNAL_ATTACHMENTS_DIR: Final = os.path.expanduser("~/AppData/Local/signal-cli/attachments/")
+    TMP_DIR: Final = os.path.expanduser("~/AppData/Local/Temp/")
+
+else:
+    DOC_DIR: Final[str] = "/tmp/webtemplate/дд"
+    DOCUMENT_STORAGE_PATH: Final = "/tmp/webtemplate/дд"
+    BACKUP_STORAGE_PATH: Final = "/tmp/webtemplate/дд/backups"
+    INBOX_DIR_PATH: Final[str] = "/tmp/webtemplate/дд/inbox"
+    OUTBOX_DIR_PATH: Final[str] = "/tmp/webtemplate/дд/outbox"
+    INBOX_LOCAL_DIR_PATH = f"{DOC_DIR}/inbox"
+    OUTBOX_LOCAL_DIR_PATH = f"{DOC_DIR}/outbox"
+
+    SOCKET_PATH: Final = "/tmp/signal-bot.sock"
+    TCP_HOST: Final = '127.0.0.1'
+    TCP_PORT: Final = 1234
+
+    DB_NAME = os.path.join(os.path.expanduser("~/work/WebTemplate/signal-data"), "bot_data.db")
+    MAX_QUERY_RESULTS = 50
+    RECORDS_PER_PAGE = 10
+
+    SIGNAL_ATTACHMENTS_DIR: Final = os.path.expanduser("~/.local/share/signal-cli/attachments/")
     TMP_DIR: Final = os.path.expanduser("~/tmp/")
 

@@ -1,5 +1,6 @@
 import logging
 import os
+from logging.handlers import RotatingFileHandler
 import config
 
 class LoggerManager:
@@ -37,8 +38,10 @@ class LoggerManager:
     def _setup_handlers(self):
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-        # Файловий хендлер
-        self.file_handler = logging.FileHandler(self.log_file, encoding='utf-8')
+        # Файловий хендлер з ротацією: максимум 5 МБ, зберігати 5 архівів
+        self.file_handler = RotatingFileHandler(
+            self.log_file, maxBytes=5 * 1024 * 1024, backupCount=5, encoding='utf-8'
+        )
         self.file_handler.setFormatter(formatter)
         self._logger.addHandler(self.file_handler)
 

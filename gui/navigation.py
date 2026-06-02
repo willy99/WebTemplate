@@ -1,4 +1,5 @@
 from nicegui import ui, app
+from fastapi.responses import JSONResponse
 
 from dics.security_config import PERM_READ, PERM_EDIT, MODULE_SEARCH, MODULE_ADMIN, MODULE_TASK
 from gui.components import AppMenu
@@ -153,6 +154,10 @@ def init_nicegui(workflow_obj):
     async def pages_cv():
         await render_cv_page()
 
+    @app.get('/health')
+    def health_check():
+        return JSONResponse({'status': 'ok', 'title': config.PROJECT_TITLE})
+
     @ui.page('/download/template/{template_path:path}')
     @require_access(auth_manager, MODULE_SEARCH, PERM_READ)
     def download_template(template_path: str):
@@ -184,5 +189,7 @@ def init_nicegui(workflow_obj):
         title=config.PROJECT_TITLE,
         reload=config.UI_RELOAD,
         show=False,
-        storage_secret=config.UI_SECRET_KEY
+        storage_secret=config.UI_SECRET_KEY,
+        ssl_keyfile=config.UI_SSL_KEYFILE or None,
+        ssl_certfile=config.UI_SSL_CERTFILE or None,
     )

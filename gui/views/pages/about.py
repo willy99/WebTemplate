@@ -8,10 +8,10 @@ async def about_page():
 
     raw_content = (
         "=== SYSTEM ACCESS GRANTED ===\\n"
-        "PROJECT   : Травел-Блогери\\n\\t"
+        "PROJECT   : Web Template\\n\\t"
         "BUILT     : (С) 2026. На колінці\\n"
         "TECHNOLOGY: Python / NiceGUI\\t / Cyber Security\\n"
-        "ASSIGNMENT: Оптимізація та захист систем обліку СЗЧ\\n"
+        "ASSIGNMENT: Веб проект-шаблон для бізнес задач\\n"
         "MISSION   : Фортеця для даних. \\tШвидка інтелектуальна обробка. \\tПаперово-табличне пекло - в сміття!\\n"
         "-----------------------------------------\\n\\n"
         "DEVELOPER : 👨‍🦱Papashon\\n"        

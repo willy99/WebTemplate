@@ -21,6 +21,7 @@ class AuthManager:
         # self.user_service = UserService(self.db, workflow.signalClient, workflow.emailClient)
         # self.auth_service = AuthService(self.db, self.user_service)
         self.auth_service.init_default_admin()
+        self.auth_service.seed_default_role_permissions()
         self.audit_service = workflow.audit_log_service
 
         self.log_manager = workflow.log_manager
@@ -282,7 +283,10 @@ class AuthManager:
     def is_ip_blocked(self, ip: str, max_attempts=config.SECURITY_MAX_ATTEMPTS, window_seconds=300) -> bool:
         return self.auth_service.is_ip_blocked(ip, max_attempts, window_seconds)
 
-
     def register_ip_attempt(self, ip: str):
         self.log_manager.debug('🔑 Логін невірний. IP: ' + str(ip))
         return self.auth_service.register_ip_attempt(ip)
+
+    def get_available_roles(self) -> list[str]:
+        """Returns role names from the DB (falls back to hardcoded defaults on error)."""
+        return self.auth_service.get_roles()

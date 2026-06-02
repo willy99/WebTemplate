@@ -90,3 +90,22 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     details TEXT                 -- JSON рядок
 );
 
+-- Таблиця ролей (keyed by name; allows admin panel to add/remove roles without code changes)
+CREATE TABLE IF NOT EXISTS roles (
+    name TEXT PRIMARY KEY,
+    description TEXT
+);
+
+INSERT OR IGNORE INTO roles (name, description) VALUES ('admin',     'Адміністратор');
+INSERT OR IGNORE INTO roles (name, description) VALUES ('Командір',  'Командир (керівний рівень)');
+INSERT OR IGNORE INTO roles (name, description) VALUES ('Офіс',      'Офісний персонал');
+INSERT OR IGNORE INTO roles (name, description) VALUES ('Бджілка',   'Польовий / обмежений доступ');
+INSERT OR IGNORE INTO roles (name, description) VALUES ('Гість',     'Гість (тільки читання)');
+
+-- Таблиця спроб входу — персистентний IP rate-limiting, виживає перезапуск
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ip_address TEXT NOT NULL,
+    attempted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
