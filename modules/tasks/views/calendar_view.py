@@ -1,14 +1,17 @@
-from nicegui import ui, run
+from nicegui import ui
 import calendar
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 
-from dics.deserter_xls_dic import TASK_TYPES
-from service.constants import TASK_STATUS_COMPLETED, TASK_STATUS_IN_PROGRESS, TASK_STATUS_NEW, MONTHS, DB_DATETIME_FORMAT, DB_DATE_FORMAT
+from i18n import t
+from service.constants import DB_DATE_FORMAT
+from modules.tasks.domain import TASK_TYPES, TASK_STATUS_COMPLETED, TASK_STATUS_IN_PROGRESS, TASK_STATUS_NEW
 
 
 def render_calendar_page(task_ctrl, ctx):
-    ui.label('Календар задач').classes('w-full text-center text-3xl font-bold mb-6')
+    ui.label(t('tasks.calendar_title')).classes('w-full text-center text-3xl font-bold mb-6')
+
+    months = t('tasks.months').split(',')
 
     # Головний стейт календаря
     now = datetime.now()
@@ -21,13 +24,13 @@ def render_calendar_page(task_ctrl, ctx):
     }
 
     assignee_options = {
-        'all': 'Всі співробітники',
-        ctx.user_id: 'Тільки мої задачі'
+        'all': t('tasks.cal_all_users'),
+        ctx.user_id: t('tasks.cal_only_mine')
     }
 
-    task_type_options = {'all': 'Всі типи'}
-    for t in TASK_TYPES.keys():
-        task_type_options[t] = t
+    task_type_options = {'all': t('tasks.all_types')}
+    for task_type in TASK_TYPES.keys():
+        task_type_options[task_type] = task_type
 
     calendar_container = ui.column().classes('w-full max-w-7xl mx-auto shadow-md rounded-lg overflow-hidden border')
 
@@ -44,12 +47,12 @@ def render_calendar_page(task_ctrl, ctx):
 
         # Блок фільтрів
         with ui.row().classes('items-center gap-2 sm:gap-4 flex-grow justify-start sm:justify-end flex-wrap'):
-            ui.select(options=assignee_options, label='Виконавець') \
+            ui.select(options=assignee_options, label=t('tasks.assignee_short')) \
                 .bind_value(state, 'assignee_id') \
                 .on_value_change(lambda: refresh_data()) \
                 .classes('w-full sm:w-48')
 
-            ui.select(options=task_type_options, label='Тип задачі') \
+            ui.select(options=task_type_options, label=t('tasks.task_type')) \
                 .bind_value(state, 'task_type_filter') \
                 .on_value_change(lambda: refresh_data()) \
                 .classes('w-full sm:w-48')
@@ -78,18 +81,18 @@ def render_calendar_page(task_ctrl, ctx):
             state['tasks'] = tasks or []
             draw_calendar()
         except Exception as e:
-            ui.notify(f'Помилка завантаження задач: {e}', type='negative')
+            ui.notify(t('tasks.load_error', error=e), type='negative')
         finally:
             refresh_btn.props(remove='loading')
 
     def draw_calendar():
         calendar_container.clear()
-        month_label.set_text(f"{MONTHS[state['month']]} {state['year']}")
+        month_label.set_text(f"{months[state['month']]} {state['year']}")
 
         tasks_by_date = defaultdict(list)
-        for t in state['tasks']:
-            # MODIFICATION: Use created_date if task_deadline is None so tasks show up somewhere
-            target_date = getattr(t, 'task_deadline', None) or getattr(t, 'created_date', None)
+        for task in state['tasks']:
+            # Use created_date if task_deadline is None so tasks show up somewhere
+            target_date = getattr(task, 'task_deadline', None) or getattr(task, 'created_date', None)
 
             if target_date:
                 # Ensure it's a string in YYYY-MM-DD format
@@ -100,11 +103,11 @@ def render_calendar_page(task_ctrl, ctx):
                 else:
                     continue  # Skip if unparseable
 
-                tasks_by_date[date_str].append(t)
+                tasks_by_date[date_str].append(task)
 
         with calendar_container:
             with ui.grid(columns=7).classes('w-full bg-gray-200 gap-[1px]'):
-                days_of_week = ['Пн', 'Вв', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд']
+                days_of_week = t('tasks.weekdays').split(',')
                 for day_name in days_of_week:
                     ui.label(day_name).classes('bg-blue-50 text-center font-bold p-1 sm:p-2 text-blue-900 text-xs sm:text-base')
 
@@ -129,10 +132,10 @@ def render_calendar_page(task_ctrl, ctx):
                             ui.label(str(d.day)).classes(day_lbl_class)
 
                             day_tasks = tasks_by_date.get(date_str, [])
-                            for t in day_tasks:
-                                status = getattr(t, 'task_status', '')
-                                subject = getattr(t, 'task_subject', 'Без назви')
-                                task_id = getattr(t, 'id', None)
+                            for task in day_tasks:
+                                status = getattr(task, 'task_status', '')
+                                subject = getattr(task, 'task_subject', t('tasks.untitled'))
+                                task_id = getattr(task, 'id', None)
 
                                 color = 'grey'
                                 icon = 'task'

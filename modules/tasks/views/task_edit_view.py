@@ -1,16 +1,17 @@
 from nicegui import ui
 from datetime import datetime
+
 from gui.services.auth_manager import AuthManager
-from domain.task import Task, Subtask
-from gui.controllers.task_controller import TaskController
 from gui.tools.ui_components import confirm_delete_dialog
-from service.constants import TASK_STATUS_NEW, TASK_STATUS_COMPLETED, TASK_STATUS_IN_PROGRESS, TASK_STATUS_CANCELED
-from dics.deserter_xls_dic import TASK_TYPES
+from i18n import t
+from modules.tasks.controller import TaskController
+from modules.tasks.domain import Task, Subtask, TASK_TYPES, \
+    TASK_STATUS_NEW, TASK_STATUS_COMPLETED, TASK_STATUS_IN_PROGRESS, TASK_STATUS_CANCELED
 
 
 def render_task_edit_page(controller: TaskController, auth_manager: AuthManager, task_id: int = None):
     is_new = task_id is None
-    page_title = 'Створення нової задачі' if is_new else f'Редагування задачі №{task_id}'
+    page_title = t('tasks.edit_title_new') if is_new else t('tasks.edit_title', id=task_id)
 
     # Стейт форми (додано 'new_subtask_text' для синхронізації інпутів на моб/ПК)
     state = {
@@ -31,9 +32,9 @@ def render_task_edit_page(controller: TaskController, auth_manager: AuthManager,
         if not u.get('is_active'):
             continue
         user_id = u['id']
-        display_name = u.get('full_name') or u.get('username') or f"Користувач {user_id}"
+        display_name = u.get('full_name') or u.get('username') or t('tasks.user_fallback', id=user_id)
         if user_id == auth_manager.get_current_context().user_id:
-            users_options[user_id] = f"{display_name} (Ви)"
+            users_options[user_id] = f"{display_name} {t('tasks.you_suffix')}"
         else:
             users_options[user_id] = display_name
     type_options = list(TASK_TYPES.keys())
@@ -53,14 +54,14 @@ def render_task_edit_page(controller: TaskController, auth_manager: AuthManager,
             if existing_task.task_deadline:
                 state['task_deadline'] = existing_task.task_deadline.strftime('%d.%m.%Y %H:%M')
         else:
-            ui.notify('Задачу не знайдено!', type='negative')
+            ui.notify(t('tasks.not_found'), type='negative')
             ui.navigate.to('/tasks')
             return
 
     # --- ОБРОБНИКИ ДІЙ ---
     def on_save():
         if not state['task_subject'].strip():
-            ui.notify('Введіть тему задачі!', type='warning')
+            ui.notify(t('tasks.enter_subject'), type='warning')
             return
 
         parsed_deadline = None
@@ -68,7 +69,7 @@ def render_task_edit_page(controller: TaskController, auth_manager: AuthManager,
             try:
                 parsed_deadline = datetime.strptime(state['task_deadline'], '%d.%m.%Y %H:%M')
             except ValueError:
-                ui.notify('Невірний формат дати. Використовуйте ДД.ММ.РРРР ГГ:ХХ', type='negative')
+                ui.notify(t('tasks.bad_date'), type='negative')
                 return
 
         parsed_subtasks = [Subtask(title=st['title'], is_done=st['is_done']) for st in state.get('subtasks', [])]
@@ -87,27 +88,27 @@ def render_task_edit_page(controller: TaskController, auth_manager: AuthManager,
 
         try:
             saved_id = controller.save_task(auth_manager.get_current_context(), task_model)
-            ui.notify(f'Задачу №{saved_id} успішно збережено!', type='positive')
+            ui.notify(t('tasks.saved', id=saved_id), type='positive')
             ui.navigate.to('/tasks')
         except Exception as e:
-            ui.notify(f'Помилка збереження: {e}', type='negative')
+            ui.notify(t('tasks.save_error', error=e), type='negative')
 
     async def on_delete():
-        result = await confirm_delete_dialog(f'Видалити задачу №{task_id}?')
+        result = await confirm_delete_dialog(t('tasks.delete_confirm_n', id=task_id))
         if result:
             try:
                 controller.delete_task(auth_manager.get_current_context(), task_id)
-                ui.notify('Задачу видалено', type='positive')
+                ui.notify(t('tasks.deleted'), type='positive')
                 ui.navigate.to('/tasks')
             except Exception as e:
-                ui.notify(f'Помилка видалення: {e}', type='negative')
+                ui.notify(t('tasks.delete_error', error=e), type='negative')
 
     def change_status(new_status: str):
         state['task_status'] = new_status
         on_save()
         header_buttons.refresh()
         status_badge.refresh()
-        ui.notify(f'Статус змінено на: {new_status}')
+        ui.notify(t('tasks.status_changed_to', status=new_status))
 
     # --- ПІДЗАДАЧІ ---
     @ui.refreshable
@@ -118,7 +119,7 @@ def render_task_edit_page(controller: TaskController, auth_manager: AuthManager,
             total = len(subtasks)
             progress = completed / total if total > 0 else 0
             ui.linear_progress(progress, show_value=False).props('color="green"').classes('mb-2')
-            ui.label(f'Виконано: {completed} з {total}').classes('text-xs text-gray-500 mb-2')
+            ui.label(t('tasks.subtasks_done', done=completed, total=total)).classes('text-xs text-gray-500 mb-2')
 
         with ui.column().classes('w-full gap-1'):
             for idx, st in enumerate(subtasks):
@@ -148,18 +149,18 @@ def render_task_edit_page(controller: TaskController, auth_manager: AuthManager,
     def header_buttons():
         with ui.row().classes('items-center gap-2 flex-wrap'):
             if not is_new:
-                ui.button('ВИДАЛИТИ', icon='delete', on_click=on_delete).props('color="red"').classes('h-10 flex-grow sm:flex-grow-0')
+                ui.button(t('tasks.btn_delete'), icon='delete', on_click=on_delete).props('color="red"').classes('h-10 flex-grow sm:flex-grow-0')
 
-            ui.button('СКАСУВАТИ', icon='close', on_click=lambda: ui.navigate.to('/tasks')).props('color="gray" text-color="black"').classes('h-10 flex-grow sm:flex-grow-0')
+            ui.button(t('tasks.btn_cancel'), icon='close', on_click=lambda: ui.navigate.to('/tasks')).props('color="gray" text-color="black"').classes('h-10 flex-grow sm:flex-grow-0')
 
             if state['task_status'] == TASK_STATUS_NEW:
-                ui.button('РОЗПОЧАТИ', icon='play_arrow', on_click=lambda: change_status(TASK_STATUS_IN_PROGRESS)) \
+                ui.button(t('tasks.btn_start'), icon='play_arrow', on_click=lambda: change_status(TASK_STATUS_IN_PROGRESS)) \
                     .props('color="orange"').classes('h-10 flex-grow sm:flex-grow-0')
             elif state['task_status'] == TASK_STATUS_IN_PROGRESS:
-                ui.button('ЗАВЕРШИТИ', icon='check_circle', on_click=lambda: change_status(TASK_STATUS_COMPLETED)) \
+                ui.button(t('tasks.btn_finish'), icon='check_circle', on_click=lambda: change_status(TASK_STATUS_COMPLETED)) \
                     .props('color="green"').classes('h-10 flex-grow sm:flex-grow-0')
 
-            ui.button('ЗБЕРЕГТИ', icon='save', on_click=on_save).props('color="primary"').classes('h-10 px-8 shadow-md flex-grow sm:flex-grow-0')
+            ui.button(t('tasks.btn_save'), icon='save', on_click=on_save).props('color="primary"').classes('h-10 px-8 shadow-md flex-grow sm:flex-grow-0')
 
     @ui.refreshable
     def status_badge():
@@ -171,35 +172,35 @@ def render_task_edit_page(controller: TaskController, auth_manager: AuthManager,
         }
         color = colors.get(state['task_status'], 'gray')
         with ui.row().classes('items-center justify-between w-full border-b border-gray-100 pb-3 mb-2'):
-            ui.label('Статус:').classes('text-gray-600 font-bold')
+            ui.label(t('tasks.status_label')).classes('text-gray-600 font-bold')
             ui.badge(state['task_status'], color=color).classes('text-sm px-2 py-1')
 
     def render_main_content():
         """Ліва колонка (Основна інформація)"""
-        ui.input('Короткий заголовок (Тема)').bind_value(state, 'task_subject').classes(
+        ui.input(t('tasks.subject_label')).bind_value(state, 'task_subject').classes(
             'w-full mb-4 text-lg font-bold').props('autofocus outlined')
 
-        ui.label('Детальний опис задачі').classes('text-sm text-gray-500 font-medium mb-1')
-        ui.editor(placeholder='Опишіть задачу, додайте деталі...').bind_value(state, 'task_details').classes(
+        ui.label(t('tasks.details_label')).classes('text-sm text-gray-500 font-medium mb-1')
+        ui.editor(placeholder=t('tasks.details_placeholder')).bind_value(state, 'task_details').classes(
             'w-full mb-6 border border-gray-300 rounded'
         )
 
-        ui.label('Чек-ліст (Підзадачі)').classes('text-sm text-gray-500 font-medium mb-1')
+        ui.label(t('tasks.subtasks_label')).classes('text-sm text-gray-500 font-medium mb-1')
         with ui.card().classes('w-full p-4 mb-2 shadow-none border border-gray-200 bg-gray-50/50'):
             render_subtasks()
             with ui.row().classes('w-full items-center gap-2 mt-2 flex-nowrap'):
                 ui.icon('add_task', color='gray-400')
-                new_subtask_input = ui.input(placeholder='Додати нову підзадачу...').bind_value(state, 'new_subtask_text').classes('flex-grow').props('dense borderless')
+                new_subtask_input = ui.input(placeholder=t('tasks.add_subtask_placeholder')).bind_value(state, 'new_subtask_text').classes('flex-grow').props('dense borderless')
                 new_subtask_input.on('keydown.enter', add_subtask)
-                ui.button('Додати', on_click=add_subtask).props('flat color="primary" size="sm"')
+                ui.button(t('common.add'), on_click=add_subtask).props('flat color="primary" size="sm"')
 
     def render_side_panel():
         """Права колонка (Параметри)"""
         status_badge()
-        ui.select(users_options, label='Виконавець (Кому)').bind_value(state, 'assignee').classes('w-full')
-        ui.select(type_options, label='Тип задачі').bind_value(state, 'task_type').classes('w-full')
+        ui.select(users_options, label=t('tasks.assignee_label')).bind_value(state, 'assignee').classes('w-full')
+        ui.select(type_options, label=t('tasks.task_type')).bind_value(state, 'task_type').classes('w-full')
 
-        with ui.input('Дедлайн').bind_value(state, 'task_deadline').classes('w-full').props('outlined clearable') as deadline_input:
+        with ui.input(t('tasks.deadline_label')).bind_value(state, 'task_deadline').classes('w-full').props('outlined clearable') as deadline_input:
             with deadline_input.add_slot('append'):
                 ui.icon('event').classes('cursor-pointer')
                 with ui.menu().classes('p-2'):
@@ -229,13 +230,13 @@ def render_task_edit_page(controller: TaskController, auth_manager: AuthManager,
     # 📱 МОБІЛЬНА ВЕРСІЯ (Гармошка)
     # Використовуємо lt-md (Less Than Medium - видимо на телефонах і планшетах)
     with ui.column().classes('lt-md w-full gap-3 px-2 pb-8'):
-        with ui.expansion('Основна інформація', icon='edit_document', group='mobile_task', value=True) \
+        with ui.expansion(t('tasks.main_info'), icon='edit_document', group='mobile_task', value=True) \
                 .classes('w-full bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden') \
                 .props('header-class="bg-blue-50 text-blue-900 font-bold"'):
             with ui.column().classes('p-4 w-full'):
                 render_main_content()
 
-        with ui.expansion('Параметри та Дедлайн', icon='settings', group='mobile_task') \
+        with ui.expansion(t('tasks.params_deadline'), icon='settings', group='mobile_task') \
                 .classes('w-full bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden') \
                 .props('header-class="bg-orange-50 text-orange-900 font-bold"'):
             with ui.column().classes('p-4 w-full'):

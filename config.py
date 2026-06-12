@@ -153,7 +153,7 @@ if is_win():
     TCP_HOST: Final = '127.0.0.1'
     TCP_PORT: Final = 1234
 
-    DB_NAME = os.path.join(os.path.expanduser("~/work/WebTemplate/signal-data"), "bot_data.db")
+    DB_NAME = os.path.join(os.path.expanduser("~/work/python/WebTemplate/signal-data"), "bot_data.db")
     MAX_QUERY_RESULTS = 50
     RECORDS_PER_PAGE = 10
 
@@ -173,7 +173,7 @@ else:
     TCP_HOST: Final = '127.0.0.1'
     TCP_PORT: Final = 1234
 
-    DB_NAME = os.path.join(os.path.expanduser("~/work/WebTemplate/signal-data"), "bot_data.db")
+    DB_NAME = os.path.join(os.path.expanduser("~/work/python/WebTemplate/signal-data"), "bot_data.db")
     MAX_QUERY_RESULTS = 50
     RECORDS_PER_PAGE = 10
 

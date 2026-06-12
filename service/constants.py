@@ -27,10 +27,4 @@ DOC_STATUS_COMPLETED: Final[str] = 'Completed'
 DOC_PACKAGE_STANDART: Final[str] = 'Standart'
 DOC_PACKAGE_DETAILED: Final[str] = 'Detailed'
 
-TASK_STATUS_NEW: Final[str] = 'NEW'
-TASK_STATUS_IN_PROGRESS: Final[str] = 'IN_PROGRESS'
-TASK_STATUS_COMPLETED: Final[str] = 'COMPLETED'
-TASK_STATUS_CANCELED: Final[str] = 'CANCELED'
-
-MONTHS = ['', 'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
-              'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень']
+# TASK_STATUS_* та MONTHS переїхали у modules/tasks/ (власність модуля задач)

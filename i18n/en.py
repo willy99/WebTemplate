@@ -12,11 +12,7 @@ EN = {
     'common.close': 'Close',
 
     # --- Menu / Header ---
-    'menu.chat': 'Chat',
-    'menu.plans': 'Plans',
-    'menu.my_tasks': 'My tasks',
-    'menu.all_tasks': 'All tasks',
-    'menu.calendar': 'Calendar',
+    # (menu.plans / my_tasks / all_tasks / calendar live in modules/tasks/i18n.py)
     'menu.admin': 'Admin',
     'menu.permissions': 'Permissions',
     'menu.users': 'Users',
@@ -32,10 +28,6 @@ EN = {
     'menu.developer': 'Developer',
     'menu.guest': 'Guest',
     'menu.language': 'Language',
-    'menu.new_tasks_count': 'New tasks: {n}',
-    'menu.in_progress_count': 'In progress: {n}',
-    'menu.overdue': '⏰ Overdue!\nTask: {subject}',
-    'menu.acknowledge': 'Acknowledge',
 
     # --- Users (admin) ---
     'users.title': 'User management',
@@ -88,8 +80,5 @@ EN = {
     'perms.role': 'Role',
     'perms.description': 'Description',
 
-    # --- Chat ---
-    'chat.title': 'AI Chat',
-    'chat.placeholder': 'Type a message… (Enter to send)',
-    'chat.error': '**Error:** {error}',
+    # Chat keys live in modules/chat/__init__.py (module-shipped translations)
 }

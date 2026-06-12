@@ -1,23 +1,23 @@
+"""Controller of the Tasks module. Module-private."""
 from gui.services.auth_manager import AuthManager
 from gui.services.request_context import RequestContext
-from service.docworkflow.TaskService import TaskService
 from service.processing.MyWorkFlow import MyWorkFlow
-from domain.task import Task
+from modules.tasks.service import TaskService
+from modules.tasks.domain import Task
+
 
 class TaskController:
-    def __init__(self, worklow:MyWorkFlow, auth_manager: AuthManager):
-        self.db = worklow.db
-        self.workflow = worklow
+    def __init__(self, workflow: MyWorkFlow, auth_manager: AuthManager):
+        self.db = workflow.db
+        self.workflow = workflow
         self.auth_manager = auth_manager
         self.log_manager = self.workflow.log_manager
 
-    def get_all_tasks(self, ctx: RequestContext, search_filter = None):
-        # self.log_manager.debug('UI:' + ctx.user_name + ': Забираємо задачі для: ' + str(assignee_id))
+    def get_all_tasks(self, ctx: RequestContext, search_filter=None):
         service = TaskService(self.db, ctx)
         return service.get_all_tasks(search_filter)
 
     def update_task_status(self, ctx: RequestContext, task_id: int, new_status: str):
-        # self.log_manager.debug('UI:' + ctx.user_name + ': Зберігаємо статус задачі: ' + str(task_id) + ' : ' + str(new_status))
         service = TaskService(self.db, ctx)
         return service.change_status(task_id, new_status)
 
@@ -32,7 +32,6 @@ class TaskController:
         service.delete_task(task_id)
 
     def get_task_by_id(self, ctx: RequestContext, task_id: int) -> Task:
-        # self.log_manager.debug('UI:' + ctx.user_name + ': Отримуємо задачу: ' + str(task_id))
         service = TaskService(self.db, ctx)
         return service.get_task_by_id(task_id)
 

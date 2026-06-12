@@ -3,24 +3,20 @@ import urllib.parse
 
 from config import PROJECT_TITLE
 from gui.controllers.inbox_controller import InboxController
-from gui.controllers.task_controller import TaskController
 from gui.services.auth_manager import AuthManager
 from dics.security_config import MODULE_REPORT_GENERAL, MODULE_ADMIN, PERM_READ, PERM_EDIT
-
-if not hasattr(app, 'alarmed_tasks'):
-    app.alarmed_tasks = set()
 
 from nicegui import ui, app, run
 from gui.auth_routes import logout
 from datetime import datetime
 import config
 from i18n import t, set_language, get_language, LANGUAGES
+from modules import menu_tree, render_header_widgets
 
 
 class AppMenu:
-    def __init__(self, auth_manager: AuthManager, task_controller: TaskController, inbox_controller: InboxController):
+    def __init__(self, auth_manager: AuthManager, inbox_controller: InboxController):
         self.auth_manager = auth_manager
-        self.task_ctrl = task_controller
         self.inbox_ctrl = inbox_controller
 
     def render(self, auth_manager: AuthManager):
@@ -50,6 +46,9 @@ class AppMenu:
         can_report_general_edit = self.auth_manager.has_access(MODULE_REPORT_GENERAL, PERM_EDIT)
         can_admin = self.auth_manager.has_access(MODULE_ADMIN, PERM_READ)
 
+        # 🧩 Меню з модулів-фіч (permission-filtered для поточного юзера)
+        module_sections, module_top_items = menu_tree(self.auth_manager)
+
         # ==========================================
         # 📱 МОБІЛЬНЕ МЕНЮ (БОКОВА ПАНЕЛЬ - DRAWER)
         # ==========================================
@@ -71,20 +70,22 @@ class AppMenu:
 
             with ui.column().classes('w-full gap-0 p-2'):
 
-                make_mobile_item(t('menu.chat'), 'smart_toy', '/chat')
-                ui.separator().classes('my-1')
+                # 🧩 Пункти з модулів-фіч
+                for item in module_top_items:
+                    make_mobile_item(t(item.label_key), item.icon, item.route)
+                if module_top_items:
+                    ui.separator().classes('my-1')
 
-                with ui.expansion(t('menu.plans'), icon='follow_the_signs').classes('w-full border-b border-gray-200').props('header-class="font-bold text-slate-800"'):
-                    make_mobile_item(t('menu.my_tasks'), 'person_pin', '/tasks/today')
-                    make_mobile_item(t('menu.all_tasks'), 'assignment', '/tasks/all')
-                    make_mobile_item(t('menu.calendar'), 'calendar_month', '/calendar')
+                for section, items in module_sections:
+                    with ui.expansion(t(section.label_key), icon=section.icon).classes('w-full border-b border-gray-200').props('header-class="font-bold text-slate-800"'):
+                        for item in items:
+                            make_mobile_item(t(item.label_key), item.icon, item.route)
 
                 if can_admin:
                     with ui.expansion(t('menu.admin'), icon='admin_panel_settings').classes('w-full border-b border-gray-200').props('header-class="font-bold text-yellow-600"'):
                         make_mobile_item(t('menu.permissions'), 'vpn_key', '/admin/permissions')
                         make_mobile_item(t('menu.users'), 'manage_accounts', '/admin/users')
                         make_mobile_item(t('menu.sys_config'), 'build', '/admin/settings')
-                        make_mobile_item(t('menu.file_index'), 'cached', '/admin/file_index')
                         make_mobile_item(t('menu.logs'), 'history', '/logs')
                         make_mobile_item(t('menu.audit'), 'fact_check', '/admin/audit')
 
@@ -137,44 +138,8 @@ class AppMenu:
                     ui.timer(config.CHECK_INBOX_EVERY_SEC, update_inbox)
                     ui.timer(0.1, update_inbox, once=True)
 
-                with ui.button(icon='assignment', on_click=lambda: ui.navigate.to('/tasks/today')).props('flat color=white'):
-                    badge_new = ui.badge(color='red').props('floating rounded').classes('text-[10px] font-bold')
-                    badge_new.set_visibility(False)
-                    badge_prog = ui.badge(color='orange-8').props('floating rounded').classes('text-[10px] font-bold').style('top: auto; bottom: -4px;')
-                    badge_prog.set_visibility(False)
-
-                    with ui.tooltip().classes('bg-gray-800 text-white text-sm'):
-                        with ui.column().classes('gap-0'):
-                            lbl_new = ui.label(t('menu.new_tasks_count', n=0))
-                            lbl_prog = ui.label(t('menu.in_progress_count', n=0))
-
-                    async def update_my_tasks():
-                        try:
-                            if not app.storage.user.get('authenticated') or not auth_manager.get_current_context(): return
-                            counts = await run.io_bound(self.task_ctrl.get_my_task_counts, auth_manager.get_current_context())
-                            if not counts: return
-                            new_count, prog_count = counts
-
-                            badge_new.set_text(str(new_count))
-                            badge_new.set_visibility(new_count > 0)
-                            badge_prog.set_text(str(prog_count))
-                            badge_prog.set_visibility(prog_count > 0)
-                            lbl_new.set_text(t('menu.new_tasks_count', n=new_count))
-                            lbl_prog.set_text(t('menu.in_progress_count', n=prog_count))
-
-                            alarms = await run.io_bound(self.task_ctrl.get_my_alarms, auth_manager.get_current_context())
-                            for alarm in alarms:
-                                task_id = alarm['id']
-                                if task_id not in app.alarmed_tasks:
-                                    app.alarmed_tasks.add(task_id)
-                                    ui.notify(t('menu.overdue', subject=alarm['subject']), type='negative', position='top', timeout=0, multi_line=True,
-                                              close_button=t('menu.acknowledge'))
-                                    ui.run_javascript("new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e => console.log('Audio blocked'));")
-                        except Exception as e:
-                            pass
-
-                    ui.timer(config.CHECK_INBOX_EVERY_SEC, update_my_tasks)
-                    ui.timer(0.1, update_my_tasks, once=True)
+                # 🧩 Віджети хедера з модулів-фіч (бейджі, кнопки тощо)
+                render_header_widgets()
 
                 # ==========================================
                 # 🖥 ДЕСКТОПНЕ МЕНЮ (Використовуємо надійний клас gt-sm)
@@ -193,14 +158,17 @@ class AppMenu:
                 # Замість 'hidden lg:flex' використовуємо 'gt-sm' (видимо тільки на планшетах і ПК)
                 with ui.row().classes('gt-sm items-center gap-1'):
 
-                    ui.button(t('menu.chat'), icon='smart_toy', on_click=lambda: ui.navigate.to('/chat')) \
-                        .props('flat text-white no-caps')
+                    # 🧩 Пункти з модулів-фіч
+                    for item in module_top_items:
+                        ui.button(t(item.label_key), icon=item.icon,
+                                  on_click=lambda r=item.route: ui.navigate.to(r)) \
+                            .props('flat text-white no-caps')
 
-                    with ui.button(t('menu.plans'), icon='follow_the_signs').props('flat text-white icon-right="expand_more"'):
-                        with ui.menu():
-                            make_menu_item(t('menu.my_tasks'), 'person_pin', '/tasks/today')
-                            make_menu_item(t('menu.all_tasks'), 'assignment', '/tasks/all')
-                            make_menu_item(t('menu.calendar'), 'calendar_month', '/calendar')
+                    for section, items in module_sections:
+                        with ui.button(t(section.label_key), icon=section.icon).props('flat text-white icon-right="expand_more"'):
+                            with ui.menu():
+                                for item in items:
+                                    make_menu_item(t(item.label_key), item.icon, item.route)
 
                     if can_admin:
                         with ui.button(t('menu.admin'), icon='admin_panel_settings').props('flat text-yellow-400 font-bold icon-right="expand_more"'):
@@ -208,7 +176,6 @@ class AppMenu:
                                 make_menu_item(t('menu.permissions'), 'vpn_key', '/admin/permissions')
                                 make_menu_item(t('menu.users'), 'manage_accounts', '/admin/users')
                                 make_menu_item(t('menu.sys_config'), 'build', '/admin/settings')
-                                make_menu_item(t('menu.file_index'), 'cached', '/admin/file_index')
                                 make_menu_item(t('menu.logs'), 'history', '/logs')
                                 make_menu_item(t('menu.audit'), 'fact_check', '/admin/audit')
 

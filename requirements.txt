@@ -18,3 +18,4 @@ pandas~=2.2.0
 regex
 anthropic
 pytest_asyncio
+werkzeug

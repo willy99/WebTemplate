@@ -3,13 +3,7 @@ from typing import Final, Dict, List, Tuple
 NA : Final[str] = '' # порожня ячейка, інформація не додана або не змогли витягнути
 UA_QUOTE = "'"
 
-TASK_TYPES: Final[Dict[str, str]] = {
-    'Документація': 'description',
-    'Запити': 'contact_support',
-    'Фікс Даних': 'bug_report',
-    'Програмірувай': 'flutter_dash',
-    'Звіти': 'menu_book'
-}
+# TASK_TYPES переїхав у modules/tasks/domain.py (власність модуля задач)
 
 VALID_PATTERN_PHONE= r'^(?:\+380|380|0)\d{9}$'
 VALID_PATTERN_ID_NUMBER= r'^\d{10}$'

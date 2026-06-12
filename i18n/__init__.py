@@ -29,6 +29,12 @@ _translations: dict[str, dict[str, str]] = {
 }
 
 
+def register_translations(translations: dict[str, dict[str, str]]):
+    """Merge translations contributed by a feature module: {'uk': {...}, 'en': {...}}."""
+    for lang, entries in translations.items():
+        _translations.setdefault(lang, {}).update(entries)
+
+
 def get_language() -> str:
     try:
         return app.storage.user.get('lang', DEFAULT_LANGUAGE)

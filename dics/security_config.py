@@ -18,3 +18,8 @@ AVAILABLE_MODULES:Final[dict[str, str]] = {
 
 # Roles are managed in the DB (table: roles). AVAILABLE_ROLES is intentionally removed.
 
+
+def register_module(name: str, label: str):
+    """Lets a feature module contribute its permission entry at startup."""
+    AVAILABLE_MODULES.setdefault(name, label)
+

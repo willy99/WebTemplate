@@ -12,11 +12,7 @@ UK = {
     'common.close': 'Закрити',
 
     # --- Меню / Header ---
-    'menu.chat': 'Chat',
-    'menu.plans': 'Плани',
-    'menu.my_tasks': 'Мої задачі',
-    'menu.all_tasks': 'Всі задачі',
-    'menu.calendar': 'Календар',
+    # (menu.plans / my_tasks / all_tasks / calendar живуть у modules/tasks/i18n.py)
     'menu.admin': 'Адмінка',
     'menu.permissions': 'Права доступу',
     'menu.users': 'Користувачі',
@@ -32,10 +28,6 @@ UK = {
     'menu.developer': 'Розробник',
     'menu.guest': 'Гість',
     'menu.language': 'Мова',
-    'menu.new_tasks_count': 'Нових задач: {n}',
-    'menu.in_progress_count': 'В роботі: {n}',
-    'menu.overdue': '⏰ Просрачено!\nЗадача: {subject}',
-    'menu.acknowledge': 'Отримати догану',
 
     # --- Користувачі (адмінка) ---
     'users.title': 'Керування користувачами',
@@ -88,8 +80,5 @@ UK = {
     'perms.role': 'Роль',
     'perms.description': 'Опис',
 
-    # --- Chat ---
-    'chat.title': 'AI Chat',
-    'chat.placeholder': 'Напишіть повідомлення… (Enter — надіслати)',
-    'chat.error': '**Помилка:** {error}',
+    # Chat keys live in modules/chat/__init__.py (module-shipped translations)
 }

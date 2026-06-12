@@ -1,10 +1,14 @@
+"""Business logic of the Tasks module. Module-private."""
 from typing import List
-from domain.task import Task, Subtask
+from datetime import datetime, timedelta
+
 from gui.services.request_context import RequestContext
 from service.connection.MyDataBase import MyDataBase
-from service.constants import DB_TABLE_TASK, TASK_STATUS_IN_PROGRESS, TASK_STATUS_NEW, TASK_STATUS_COMPLETED, DB_TABLE_SUBTASK, DB_DATETIME_FORMAT, DB_DATETIME_START_FORMAT, \
-    DB_DATETIME_END_FORMAT
-from datetime import datetime, timedelta
+from service.constants import DB_TABLE_TASK, DB_TABLE_SUBTASK, DB_DATETIME_FORMAT, \
+    DB_DATETIME_START_FORMAT, DB_DATETIME_END_FORMAT
+from modules.tasks.domain import Task, Subtask, \
+    TASK_STATUS_NEW, TASK_STATUS_IN_PROGRESS, TASK_STATUS_COMPLETED
+
 
 class TaskService:
     def __init__(self, db: MyDataBase, ctx: RequestContext):

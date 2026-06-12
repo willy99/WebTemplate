@@ -1,13 +1,12 @@
+from datetime import datetime, timedelta
+
 from nicegui import ui, app
 
 from gui.services.auth_manager import AuthManager
-from domain.task import *
-from gui.controllers.task_controller import TaskController
-from datetime import timedelta
-
 from gui.tools.ui_components import confirm_delete_dialog
-from service.constants import TASK_STATUS_COMPLETED, TASK_STATUS_NEW, TASK_STATUS_IN_PROGRESS
-from dics.deserter_xls_dic import TASK_TYPES
+from i18n import t
+from modules.tasks.controller import TaskController
+from modules.tasks.domain import TASK_TYPES, TASK_STATUS_COMPLETED, TASK_STATUS_NEW, TASK_STATUS_IN_PROGRESS
 
 
 # Словник іконок для різних типів задач
@@ -35,14 +34,14 @@ def get_card_colors(task, current_user_id: int) -> str:
 
 async def delete_task_with_confirm(task_id: int, controller: TaskController, auth_manager: AuthManager, refresh_callback):
     """Викликає вікно підтвердження і видаляє задачу, якщо користувач згоден"""
-    result = await confirm_delete_dialog('Ви дійсно хочете назавжди видалити цю задачу?')
+    result = await confirm_delete_dialog(t('tasks.delete_confirm'))
     if result:  # Якщо натиснув "Видалити" (повернулося True)
         try:
             controller.delete_task(auth_manager.get_current_context(), task_id)
-            ui.notify('Задачу успішно видалено', type='warning', icon='delete')
+            ui.notify(t('tasks.deleted'), type='warning', icon='delete')
             refresh_callback()  # Перемальовуємо дошку
         except Exception as e:
-            ui.notify(f'Помилка видалення: {e}', type='negative')
+            ui.notify(t('tasks.delete_error', error=e), type='negative')
 
 
 def render_tasks_today(controller: TaskController, auth_manager: AuthManager):
@@ -77,9 +76,9 @@ def render_task_list_page(controller: TaskController, auth_manager: AuthManager,
     users_map = {}
 
     assignee_options = {
-        'unassigned': 'Непризначені',
-        'all': 'Всі задачі',
-        auth_manager.get_current_context().user_id: 'Мої задачі',
+        'unassigned': t('tasks.opt_unassigned'),
+        'all': t('tasks.opt_all'),
+        auth_manager.get_current_context().user_id: t('tasks.opt_mine'),
     }
 
     for u in users_list:
@@ -89,16 +88,16 @@ def render_task_list_page(controller: TaskController, auth_manager: AuthManager,
             assignee_options[u['id']] = name
 
     # Типи задач
-    type_options = {'all': 'Всі типи'}
-    for t in TASK_TYPES.keys():
-        type_options[t] = t
+    type_options = {'all': t('tasks.all_types')}
+    for task_type in TASK_TYPES.keys():
+        type_options[task_type] = task_type
 
     # Тематичний період
     period_options = {
-        'all': 'Будь-який термін',
-        'overdue': '🔥 Прострочені',
-        'today': '⚡ На сьогодні / Актуальні',
-        'future': '📅 Майбутні / Безстрокові'
+        'all': t('tasks.period_all'),
+        'overdue': t('tasks.period_overdue'),
+        'today': t('tasks.period_today'),
+        'future': t('tasks.period_future'),
     }
 
     # Роки (від поточного -2 до +1)
@@ -134,70 +133,70 @@ def render_task_list_page(controller: TaskController, auth_manager: AuthManager,
             search_query = state.get('search_query', '').strip().lower()
             if search_query:
                 tasks = [
-                    t for t in tasks
-                    if (t.task_subject and search_query in t.task_subject.lower()) or
-                       (t.task_details and search_query in t.task_details.lower())
+                    task for task in tasks
+                    if (task.task_subject and search_query in task.task_subject.lower()) or
+                       (task.task_details and search_query in task.task_details.lower())
                 ]
 
         # Розподіляємо по списках
-        new_tasks = [t for t in tasks if t.task_status == TASK_STATUS_NEW]
-        in_progress_tasks = [t for t in tasks if t.task_status == TASK_STATUS_IN_PROGRESS]
-        completed_tasks = [t for t in tasks if t.task_status == TASK_STATUS_COMPLETED]
+        new_tasks = [task for task in tasks if task.task_status == TASK_STATUS_NEW]
+        in_progress_tasks = [task for task in tasks if task.task_status == TASK_STATUS_IN_PROGRESS]
+        completed_tasks = [task for task in tasks if task.task_status == TASK_STATUS_COMPLETED]
 
         # 1. Функції для рендеру контенту кожної колонки
         def render_new_col():
             if not new_tasks:
-                ui.label('Немає задач').classes('text-gray-400 text-sm w-full text-center mt-4')
-            for t in new_tasks:
-                render_task_card(t, controller, auth_manager, task_board.refresh, users_map)
+                ui.label(t('tasks.no_tasks')).classes('text-gray-400 text-sm w-full text-center mt-4')
+            for task in new_tasks:
+                render_task_card(task, controller, auth_manager, task_board.refresh, users_map)
 
         def render_in_progress_col():
             if not in_progress_tasks:
-                ui.label('Немає задач').classes('text-gray-400 text-sm w-full text-center mt-4')
-            for t in in_progress_tasks:
-                render_task_card(t, controller, auth_manager, task_board.refresh, users_map)
+                ui.label(t('tasks.no_tasks')).classes('text-gray-400 text-sm w-full text-center mt-4')
+            for task in in_progress_tasks:
+                render_task_card(task, controller, auth_manager, task_board.refresh, users_map)
 
         def render_completed_col():
             if not completed_tasks:
-                ui.label('Немає задач').classes('text-gray-400 text-sm w-full text-center mt-4')
-            for t in completed_tasks:
-                render_task_card(t, controller, auth_manager, task_board.refresh, users_map)
+                ui.label(t('tasks.no_tasks')).classes('text-gray-400 text-sm w-full text-center mt-4')
+            for task in completed_tasks:
+                render_task_card(task, controller, auth_manager, task_board.refresh, users_map)
 
         # 2. 💻 ДЕСКТОПНА ВЕРСІЯ (Сітка 3 колонки, gt-sm)
         with ui.grid(columns=3).classes('gt-sm w-full items-start justify-between gap-4 bg-white shadow-sm mt-4'):
             # СТОВПЧИК 1: NEW
             with ui.column().classes('flex-1 p-2 min-h-[70vh] border border-gray-200 rounded-md bg-gray-50'):
-                ui.label(f'НОВІ ({len(new_tasks)})').classes(
+                ui.label(t('tasks.col_new', n=len(new_tasks))).classes(
                     'font-bold text-gray-600 text-sm mb-2 text-center w-full uppercase tracking-wider')
                 render_new_col()
 
             # СТОВПЧИК 2: IN PROGRESS
             with ui.column().classes('flex-1 p-2 min-h-[70vh] border border-gray-200 rounded-md bg-gray-50'):
-                ui.label(f'В РОБОТІ ({len(in_progress_tasks)})').classes(
+                ui.label(t('tasks.col_in_progress', n=len(in_progress_tasks))).classes(
                     'font-bold text-blue-600 text-sm mb-2 text-center w-full uppercase tracking-wider')
                 render_in_progress_col()
 
             # СТОВПЧИК 3: COMPLETED
             with ui.column().classes('flex-1 p-2 min-h-[70vh] border border-gray-200 rounded-md bg-gray-50'):
-                ui.label(f'ЗАВЕРШЕНІ ({len(completed_tasks)})').classes(
+                ui.label(t('tasks.col_completed', n=len(completed_tasks))).classes(
                     'font-bold text-green-600 text-sm mb-2 text-center w-full uppercase tracking-wider')
                 render_completed_col()
 
         # 3. 📱 МОБІЛЬНА ВЕРСІЯ (Гармошка, lt-md)
         with ui.column().classes('lt-md w-full gap-3 px-2 mt-4 pb-8'):
-            with ui.expansion(f'Нові ({len(new_tasks)})', icon='fiber_new', group='mobile_board', value=True) \
+            with ui.expansion(t('tasks.col_new', n=len(new_tasks)), icon='fiber_new', group='mobile_board', value=True) \
                     .classes('w-full bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden') \
                     .props('header-class="bg-gray-50 text-gray-700 font-bold"'):
                 with ui.column().classes('p-2 w-full bg-gray-50/50'):
                     render_new_col()
 
-            with ui.expansion(f'В роботі ({len(in_progress_tasks)})', icon='pending_actions', group='mobile_board') \
+            with ui.expansion(t('tasks.col_in_progress', n=len(in_progress_tasks)), icon='pending_actions', group='mobile_board') \
                     .classes('w-full bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden') \
                     .props('header-class="bg-blue-50 text-blue-900 font-bold"'):
                 with ui.column().classes('p-2 w-full bg-gray-50/50'):
                     render_in_progress_col()
 
-            with ui.expansion(f'Завершені ({len(completed_tasks)})', icon='check_circle', group='mobile_board') \
+            with ui.expansion(t('tasks.col_completed', n=len(completed_tasks)), icon='check_circle', group='mobile_board') \
                     .classes('w-full bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden') \
                     .props('header-class="bg-green-50 text-green-900 font-bold"'):
                 with ui.column().classes('p-2 w-full bg-gray-50/50'):
@@ -217,23 +216,23 @@ def render_task_list_page(controller: TaskController, auth_manager: AuthManager,
     # Використовуємо flex-wrap для адаптивності хедера
     with ui.row().classes('w-full justify-between items-center mb-4 px-2 sm:px-4 flex-wrap gap-4'):
         # 1. Заголовок
-        ui.label('Дошка задач').classes('text-2xl sm:text-3xl font-bold')
+        ui.label(t('tasks.board_title')).classes('text-2xl sm:text-3xl font-bold')
 
         # 2. Блок з фільтром та кнопкою (розтягується на мобільному)
         with ui.row().classes('items-center gap-2 sm:gap-4 flex-grow justify-start sm:justify-end flex-wrap'):
-            ui.input('Пошук (тема, опис)', on_change=on_filter_change) \
+            ui.input(t('tasks.search_label'), on_change=on_filter_change) \
                 .bind_value(state, 'search_query') \
                 .props('clearable outlined dense debounce=500') \
                 .classes('w-full sm:w-64')
 
             filter_select = ui.select(
                 assignee_options,
-                label='Фільтр за виконавцем',
+                label=t('tasks.filter_assignee'),
                 on_change=on_filter_change
             ).bind_value(state, 'assignee_id').classes('w-full sm:w-64')
 
             filter_select.add_slot('option', f'''
-                    <q-item v-bind="props.itemProps" 
+                    <q-item v-bind="props.itemProps"
                             :class="props.opt.value == {auth_manager.get_current_context().user_id} ? 'bg-orange-50 text-orange-900 font-bold border-l-4 border-orange-200' : ''">
                         <q-item-section>
                             <q-item-label v-html="props.opt.label"></q-item-label>
@@ -241,32 +240,32 @@ def render_task_list_page(controller: TaskController, auth_manager: AuthManager,
                     </q-item>
                 ''')
 
-            ui.button('Створити нову', icon='add', on_click=lambda: ui.navigate.to('/tasks/edit/new')).props(
+            ui.button(t('tasks.create_new'), icon='add', on_click=lambda: ui.navigate.to('/tasks/edit/new')).props(
                 'color="primary"').classes('w-full sm:w-auto mt-2 sm:mt-0')
 
     # --- РОЗШИРЕНІ ФІЛЬТРИ (Сховані в гармошку) ---
-    with ui.expansion('Розширені фільтри (Дати, Типи, Періоди)', icon='filter_alt') \
+    with ui.expansion(t('tasks.advanced_filters'), icon='filter_alt') \
             .classes('w-full mt-2 bg-gray-50 rounded-md border border-gray-200 px-2 sm:px-0'):
         with ui.row().classes('w-full items-center gap-4 p-4 flex-wrap'):
-            ui.select(type_options, label='Тип задачі', on_change=on_filter_change) \
+            ui.select(type_options, label=t('tasks.task_type'), on_change=on_filter_change) \
                 .bind_value(state, 'task_type_filter').props('outlined dense').classes('w-full sm:w-48')
 
-            ui.select(period_options, label='Тематичний період', on_change=on_filter_change) \
+            ui.select(period_options, label=t('tasks.period'), on_change=on_filter_change) \
                 .bind_value(state, 'period_filter').props('outlined dense').classes('w-full sm:w-64')
 
             ui.separator().props('vertical').classes('hidden sm:block mx-2')
 
-            ui.select(year_options, label='Рік створ.', clearable=True, on_change=on_filter_change) \
+            ui.select(year_options, label=t('tasks.created_year'), clearable=True, on_change=on_filter_change) \
                 .bind_value(state, 'created_year').props('outlined dense').classes('w-full sm:w-32')
 
-            ui.input('Створено з', on_change=on_filter_change) \
+            ui.input(t('tasks.created_from'), on_change=on_filter_change) \
                 .bind_value(state, 'created_from').props('type=date clearable outlined dense').classes('w-full sm:w-40')
 
-            ui.input('Створено до', on_change=on_filter_change) \
+            ui.input(t('tasks.created_to'), on_change=on_filter_change) \
                 .bind_value(state, 'created_to').props('type=date clearable outlined dense').classes('w-full sm:w-40')
 
             # Кнопка скидання фільтрів (притиснута до правого краю на ПК, на всю ширину на мобільному)
-            ui.button('Скинути', icon='restart_alt', on_click=reset_filters) \
+            ui.button(t('common.reset'), icon='restart_alt', on_click=reset_filters) \
                 .props('flat color="red"').classes('w-full sm:w-auto sm:ml-auto mt-2 sm:mt-0')
 
     # === РЕНДЕРИМО ДОШКУ ===
@@ -283,7 +282,7 @@ def render_task_card(task, controller: TaskController, auth_manager: AuthManager
         # РЯДОК 1: Іконка типу, Заголовок, Кнопки
         with ui.row().classes('w-full items-center no-wrap gap-2'):
             ui.icon(get_type_icon(task.task_type), size='sm').classes('text-gray-500').tooltip(
-                task.task_type or 'Тип не вказано')
+                task.task_type or t('tasks.no_type'))
 
             # Subject займає весь вільний простір, обрізається, якщо задовгий
             ui.label(task.task_subject) \
@@ -301,38 +300,38 @@ def render_task_card(task, controller: TaskController, auth_manager: AuthManager
                 ui.button(
                     icon='delete',
                     on_click=lambda: delete_task_with_confirm(task.id, controller, auth_manager, refresh_callback)
-                ).props('flat dense size=sm color="red-4"').classes('px-1 min-w-[24px]').tooltip('Видалити задачу')
+                ).props('flat dense size=sm color="red-4"').classes('px-1 min-w-[24px]').tooltip(t('tasks.delete_tooltip'))
 
             # Кнопка "Наступний статус"
             if task.task_status == TASK_STATUS_NEW:
                 ui.button(icon='arrow_forward',
                           on_click=lambda: change_and_refresh(task.id, TASK_STATUS_IN_PROGRESS, controller, auth_manager,
                                                               refresh_callback)).props(
-                    'flat dense size=sm color="primary"').classes('px-1 min-w-[24px]').tooltip('В роботу')
+                    'flat dense size=sm color="primary"').classes('px-1 min-w-[24px]').tooltip(t('tasks.to_work'))
             elif task.task_status == TASK_STATUS_IN_PROGRESS:
                 # Кнопка 1: Повернути в "Нові" (Відкласти)
                 ui.button(icon='arrow_back',
                           on_click=lambda:
                           change_and_refresh(task.id, TASK_STATUS_NEW, controller, auth_manager, refresh_callback)
                           ).props('flat dense size=sm color="orange"').classes('px-1 min-w-[24px]').tooltip(
-                    'Відкласти в ящик')
+                    t('tasks.postpone'))
 
                 # Кнопка 2: Завершити
                 ui.button(icon='done',
                           on_click=lambda:
                           change_and_refresh(task.id, TASK_STATUS_COMPLETED, controller, auth_manager, refresh_callback)
                           ).props('flat dense size=sm color="green"').classes('px-1 min-w-[24px]').tooltip(
-                    'Завершити')
+                    t('tasks.complete'))
 
             elif task.task_status == TASK_STATUS_COMPLETED:
                 ui.button(icon='settings_backup_restore',
                           on_click=lambda:
                           change_and_refresh(task.id, TASK_STATUS_IN_PROGRESS, controller, auth_manager, refresh_callback)
                           ).props('flat dense size=sm color="orange"').classes('px-1 min-w-[24px]').tooltip(
-                    'Повернути в роботу')
+                    t('tasks.reopen'))
 
-        deadline_str = task.task_deadline.strftime("%d.%m.%Y %H:%M") if task.task_deadline else "Без дедлайну"
-        assignee_name = users_map.get(task.assignee, 'Не призначено')
+        deadline_str = task.task_deadline.strftime("%d.%m.%Y %H:%M") if task.task_deadline else t('tasks.no_deadline')
+        assignee_name = users_map.get(task.assignee, t('tasks.not_assigned'))
 
         # --- ЛОГІКА КОЛЬОРІВ ДЕДЛАЙНУ ---
         deadline_classes = 'text-gray-500'  # Дефолтний стиль (просто сірий текст, без фону)
@@ -363,5 +362,5 @@ def change_and_refresh(task_id: int, new_status: str, controller: TaskController
                        refresh_callback):
     """Оновлює статус у базі і миттєво перемальовує дошку"""
     controller.update_task_status(auth_manager.get_current_context(), task_id, new_status)
-    ui.notify('Статус оновлено!', type='positive', position='top-right')
+    ui.notify(t('tasks.status_updated'), type='positive', position='top-right')
     refresh_callback()

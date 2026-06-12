@@ -4,7 +4,6 @@ from dics.security_config import PERM_DELETE, MODULE_TASK, PERM_EDIT, MODULE_SEA
 from domain.db.AuditLogDB import *
 from gui.controllers.audit_controller import AuditController
 from gui.controllers.inbox_controller import InboxController
-from gui.controllers.task_controller import TaskController
 from gui.services.auth_manager import AuthManager
 import config
 import os
@@ -27,10 +26,10 @@ def _safe_filename(name: str) -> str:
     return name
 
 
-def render_inbox_page(inbox_ctrl: InboxController, task_ctrl: TaskController, audit_ctrl: AuditController, auth_manager: AuthManager):
+def render_inbox_page(inbox_ctrl: InboxController, audit_ctrl: AuditController, auth_manager: AuthManager):
     can_assign = auth_manager.has_access(MODULE_TASK, PERM_DELETE)
     can_edit = auth_manager.has_access(MODULE_SEARCH, PERM_EDIT)
-    users_list = task_ctrl.get_available_users()
+    users_list = auth_manager.get_all_users()
     user_options = {u['username']: u.get('full_name') or u['username'] for u in users_list if 'username' in u}
 
     state = {
