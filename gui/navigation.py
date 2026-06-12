@@ -11,6 +11,7 @@ from gui.controllers.config_controller import ConfigController
 from gui.controllers.user_controller import UserController
 from gui.views.pages.cv import render_cv_page
 from gui.views.pages import about
+from gui.views.pages.chat_view import render_chat_page
 from gui.views.home_view import render_home_page
 from gui.views.report.logs_view import render_logs_page
 from gui.views.inbox import inbox_triage_view
@@ -153,6 +154,12 @@ def init_nicegui(workflow_obj):
     @ui.page('/pages/cv')
     async def pages_cv():
         await render_cv_page()
+
+    @ui.page('/chat')
+    @require_access(auth_manager, MODULE_SEARCH, PERM_READ)
+    def chat_page():
+        app_menu.render(auth_manager)
+        render_chat_page()
 
     @app.get('/health')
     def health_check():

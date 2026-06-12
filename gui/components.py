@@ -14,6 +14,7 @@ from nicegui import ui, app, run
 from gui.auth_routes import logout
 from datetime import datetime
 import config
+from i18n import t, set_language, get_language, LANGUAGES
 
 
 class AppMenu:
@@ -43,7 +44,7 @@ class AppMenu:
         # Отримуємо дані юзера та дозволи
         user_info = app.storage.user.get('user_info', {})
         user_role = user_info.get('role', '')
-        user_name = user_info.get('full_name') or user_info.get('username') or 'Гість'
+        user_name = user_info.get('full_name') or user_info.get('username') or t('menu.guest')
 
         can_report_general = self.auth_manager.has_access(MODULE_REPORT_GENERAL, PERM_READ)
         can_report_general_edit = self.auth_manager.has_access(MODULE_REPORT_GENERAL, PERM_EDIT)
@@ -70,24 +71,27 @@ class AppMenu:
 
             with ui.column().classes('w-full gap-0 p-2'):
 
-                with ui.expansion('Плани', icon='follow_the_signs').classes('w-full border-b border-gray-200').props('header-class="font-bold text-slate-800"'):
-                    make_mobile_item('Мої задачі', 'person_pin', '/tasks/today')
-                    make_mobile_item('Всі задачі', 'assignment', '/tasks/all')
-                    make_mobile_item('Календар', 'calendar_month', '/calendar')
+                make_mobile_item(t('menu.chat'), 'smart_toy', '/chat')
+                ui.separator().classes('my-1')
+
+                with ui.expansion(t('menu.plans'), icon='follow_the_signs').classes('w-full border-b border-gray-200').props('header-class="font-bold text-slate-800"'):
+                    make_mobile_item(t('menu.my_tasks'), 'person_pin', '/tasks/today')
+                    make_mobile_item(t('menu.all_tasks'), 'assignment', '/tasks/all')
+                    make_mobile_item(t('menu.calendar'), 'calendar_month', '/calendar')
 
                 if can_admin:
-                    with ui.expansion('Адмінка', icon='admin_panel_settings').classes('w-full border-b border-gray-200').props('header-class="font-bold text-yellow-600"'):
-                        make_mobile_item('Права доступу', 'vpn_key', '/admin/permissions')
-                        make_mobile_item('Користувачі', 'manage_accounts', '/admin/users')
-                        make_mobile_item('Конфіг Системи', 'build', '/admin/settings')
-                        make_mobile_item('Індексація файлів', 'cached', '/admin/file_index')
-                        make_mobile_item('Логи', 'history', '/logs')
-                        make_mobile_item('Журнал подій', 'fact_check', '/admin/audit')
+                    with ui.expansion(t('menu.admin'), icon='admin_panel_settings').classes('w-full border-b border-gray-200').props('header-class="font-bold text-yellow-600"'):
+                        make_mobile_item(t('menu.permissions'), 'vpn_key', '/admin/permissions')
+                        make_mobile_item(t('menu.users'), 'manage_accounts', '/admin/users')
+                        make_mobile_item(t('menu.sys_config'), 'build', '/admin/settings')
+                        make_mobile_item(t('menu.file_index'), 'cached', '/admin/file_index')
+                        make_mobile_item(t('menu.logs'), 'history', '/logs')
+                        make_mobile_item(t('menu.audit'), 'fact_check', '/admin/audit')
 
-                with ui.expansion('Налаштування', icon='settings').classes('w-full border-b border-gray-200').props('header-class="font-bold text-slate-800"'):
-                    make_mobile_item('Налаштування профілю', 'manage_accounts', '/user_settings')
-                    make_mobile_item('2FA', 'security', '/user_settings_2fa')
-                    ui.button('Вийти з системи', icon='logout', on_click=lambda: logout(self.auth_manager)) \
+                with ui.expansion(t('menu.settings'), icon='settings').classes('w-full border-b border-gray-200').props('header-class="font-bold text-slate-800"'):
+                    make_mobile_item(t('menu.profile_settings'), 'manage_accounts', '/user_settings')
+                    make_mobile_item(t('menu.twofa'), 'security', '/user_settings_2fa')
+                    ui.button(t('menu.logout'), icon='logout', on_click=lambda: logout(self.auth_manager)) \
                         .props('flat align="left" color="negative"').classes('w-full no-caps ml-2 mt-2 font-bold')
 
         # ==========================================
@@ -141,8 +145,8 @@ class AppMenu:
 
                     with ui.tooltip().classes('bg-gray-800 text-white text-sm'):
                         with ui.column().classes('gap-0'):
-                            lbl_new = ui.label('Нових задач: 0')
-                            lbl_prog = ui.label('В роботі: 0')
+                            lbl_new = ui.label(t('menu.new_tasks_count', n=0))
+                            lbl_prog = ui.label(t('menu.in_progress_count', n=0))
 
                     async def update_my_tasks():
                         try:
@@ -155,16 +159,16 @@ class AppMenu:
                             badge_new.set_visibility(new_count > 0)
                             badge_prog.set_text(str(prog_count))
                             badge_prog.set_visibility(prog_count > 0)
-                            lbl_new.set_text(f'Нових задач: {new_count}')
-                            lbl_prog.set_text(f'В роботі: {prog_count}')
+                            lbl_new.set_text(t('menu.new_tasks_count', n=new_count))
+                            lbl_prog.set_text(t('menu.in_progress_count', n=prog_count))
 
                             alarms = await run.io_bound(self.task_ctrl.get_my_alarms, auth_manager.get_current_context())
                             for alarm in alarms:
                                 task_id = alarm['id']
                                 if task_id not in app.alarmed_tasks:
                                     app.alarmed_tasks.add(task_id)
-                                    ui.notify(f"⏰ Просрачено!\nЗадача: {alarm['subject']}", type='negative', position='top', timeout=0, multi_line=True,
-                                              close_button='Отримати догану')
+                                    ui.notify(t('menu.overdue', subject=alarm['subject']), type='negative', position='top', timeout=0, multi_line=True,
+                                              close_button=t('menu.acknowledge'))
                                     ui.run_javascript("new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e => console.log('Audio blocked'));")
                         except Exception as e:
                             pass
@@ -189,21 +193,24 @@ class AppMenu:
                 # Замість 'hidden lg:flex' використовуємо 'gt-sm' (видимо тільки на планшетах і ПК)
                 with ui.row().classes('gt-sm items-center gap-1'):
 
-                    with ui.button('Плани', icon='follow_the_signs').props('flat text-white icon-right="expand_more"'):
+                    ui.button(t('menu.chat'), icon='smart_toy', on_click=lambda: ui.navigate.to('/chat')) \
+                        .props('flat text-white no-caps')
+
+                    with ui.button(t('menu.plans'), icon='follow_the_signs').props('flat text-white icon-right="expand_more"'):
                         with ui.menu():
-                            make_menu_item('Мої задачі', 'person_pin', '/tasks/today')
-                            make_menu_item('Всі задачі', 'assignment', '/tasks/all')
-                            make_menu_item('Календар', 'calendar_month', '/calendar')
+                            make_menu_item(t('menu.my_tasks'), 'person_pin', '/tasks/today')
+                            make_menu_item(t('menu.all_tasks'), 'assignment', '/tasks/all')
+                            make_menu_item(t('menu.calendar'), 'calendar_month', '/calendar')
 
                     if can_admin:
-                        with ui.button('Адмінка', icon='admin_panel_settings').props('flat text-yellow-400 font-bold icon-right="expand_more"'):
+                        with ui.button(t('menu.admin'), icon='admin_panel_settings').props('flat text-yellow-400 font-bold icon-right="expand_more"'):
                             with ui.menu():
-                                make_menu_item('Права доступу', 'vpn_key', '/admin/permissions')
-                                make_menu_item('Користувачі', 'manage_accounts', '/admin/users')
-                                make_menu_item('Конфіг Системи', 'build', '/admin/settings')
-                                make_menu_item('Індексація файлів', 'cached', '/admin/file_index')
-                                make_menu_item('Логи', 'history', '/logs')
-                                make_menu_item('Журнал подій', 'fact_check', '/admin/audit')
+                                make_menu_item(t('menu.permissions'), 'vpn_key', '/admin/permissions')
+                                make_menu_item(t('menu.users'), 'manage_accounts', '/admin/users')
+                                make_menu_item(t('menu.sys_config'), 'build', '/admin/settings')
+                                make_menu_item(t('menu.file_index'), 'cached', '/admin/file_index')
+                                make_menu_item(t('menu.logs'), 'history', '/logs')
+                                make_menu_item(t('menu.audit'), 'fact_check', '/admin/audit')
 
                     ui.separator().props('vertical dark').classes('mx-2 h-8')
 
@@ -213,17 +220,34 @@ class AppMenu:
                             with ui.menu_item(on_click=lambda: ui.navigate.to('/user_settings')):
                                 with ui.row().classes('items-center gap-3'):
                                     ui.icon('manage_accounts', color='primary')
-                                    ui.label('Налаштування профілю')
+                                    ui.label(t('menu.profile_settings'))
                             with ui.menu_item(on_click=lambda: ui.navigate.to('/user_settings_2fa')):
                                 with ui.row().classes('items-center gap-3'):
                                     ui.icon('security', color='warning')
-                                    ui.label('Двофакторна автентифікація')
+                                    ui.label(t('menu.twofa_full'))
                             ui.separator()
                             with ui.menu_item(on_click=lambda: logout(self.auth_manager)):
                                 with ui.row().classes('items-center gap-3'):
                                     ui.icon('logout', color='negative')
-                                    ui.label('Вийти з системи')
-                            make_menu_item('Розробник', 'info', '/pages/about')
+                                    ui.label(t('menu.logout'))
+                            make_menu_item(t('menu.developer'), 'info', '/pages/about')
+
+                # ==========================================
+                # 🌐 ПЕРЕМИКАЧ МОВИ
+                # ==========================================
+                def switch_language(code: str):
+                    set_language(code)
+                    ui.navigate.reload()
+
+                current_lang = get_language()
+                with ui.button(icon='language').props('flat round color="white"').tooltip(t('menu.language')):
+                    with ui.menu():
+                        for code, label in LANGUAGES.items():
+                            with ui.menu_item(on_click=lambda c=code: switch_language(c)):
+                                with ui.row().classes('items-center gap-2'):
+                                    ui.label(label).classes('font-medium' if code == current_lang else '')
+                                    if code == current_lang:
+                                        ui.icon('check', size='xs', color='primary')
 
                 # ==========================================
                 # 🍔 КНОПКА ГАМБУРГЕР (Використовуємо надійний клас lt-md)

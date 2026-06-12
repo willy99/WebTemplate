@@ -123,6 +123,35 @@ class AuthService:
             return [row['name'] for row in rows]
         return ['admin', 'Командір', 'Офіс', 'Бджілка', 'Гість']
 
+    def get_roles_full(self) -> list[dict]:
+        """Returns roles with name and description for the admin panel."""
+        rows = self.db.__execute_fetchall__(
+            f"SELECT name, description FROM {DB_TABLE_ROLES} ORDER BY name"
+        )
+        return [dict(row) for row in rows] if rows else []
+
+    def add_role(self, name: str, description: str) -> tuple[bool, str]:
+        try:
+            self.db.__execute_query__(
+                f"INSERT INTO {DB_TABLE_ROLES} (name, description) VALUES (?, ?)",
+                (name.strip(), description.strip())
+            )
+            return True, f'Роль "{name}" успішно додано'
+        except Exception as e:
+            return False, f'Помилка: роль вже існує або невірні дані'
+
+    def delete_role(self, name: str) -> tuple[bool, str]:
+        if name == 'admin':
+            return False, 'Роль "admin" захищена від видалення'
+        row = self.db.__execute_fetch__(
+            "SELECT COUNT(*) AS cnt FROM users WHERE role = ?", (name,)
+        )
+        if row and row['cnt'] > 0:
+            return False, f'Неможливо видалити: {row["cnt"]} користувач(ів) мають цю роль'
+        self.db.__execute_query__("DELETE FROM role_permissions WHERE role = ?", (name,))
+        self.db.__execute_query__(f"DELETE FROM {DB_TABLE_ROLES} WHERE name = ?", (name,))
+        return True, f'Роль "{name}" видалено'
+
     def set_permissions(self, role: str, module_name: str, can_read: int, can_write: int, can_delete: int):
 
         """

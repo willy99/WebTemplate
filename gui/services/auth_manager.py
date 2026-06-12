@@ -33,8 +33,13 @@ class AuthManager:
     def get_user(self, username: str) -> User:
         return self.user_service.get_user_by_username(username)
 
-    def get_all_users(self) -> List[Dict]:
-        return self.user_service.get_all_users(hide_active=False)
+    def get_all_users(self, only_active=None, limit=None, offset=None, search=None, role=None) -> List[Dict]:
+        return self.user_service.get_all_users(
+            only_active=only_active, limit=limit, offset=offset, search=search, role=role
+        )
+
+    def count_users(self, only_active=None, search=None, role=None) -> int:
+        return self.user_service.count_users(only_active=only_active, search=search, role=role)
 
     def update_user(self, user_id: int, **kwargs):
         self.user_service.update_user(user_id=user_id, **kwargs)
@@ -290,3 +295,12 @@ class AuthManager:
     def get_available_roles(self) -> list[str]:
         """Returns role names from the DB (falls back to hardcoded defaults on error)."""
         return self.auth_service.get_roles()
+
+    def get_roles_full(self) -> list[dict]:
+        return self.auth_service.get_roles_full()
+
+    def add_role(self, name: str, description: str) -> tuple[bool, str]:
+        return self.auth_service.add_role(name, description)
+
+    def delete_role(self, name: str) -> tuple[bool, str]:
+        return self.auth_service.delete_role(name)

@@ -190,27 +190,62 @@ class UserService:
         self.db.__execute_query__(query, (phone_number,))
         self.set_user_state(phone_number, "START")
 
-    def get_all_users(self, hide_active=True) -> List[Dict]:
-        if hide_active:
-            query = f"SELECT * FROM {DB_TABLE_USER} where is_active = ?"
-            rows = self.db.__execute_fetchall__(query, (int(True),))
-        else:
-            query = f"SELECT * FROM {DB_TABLE_USER}"
-            rows = self.db.__execute_fetchall__(query)
+    def get_all_users(self,
+                      only_active: bool | None = None,
+                      limit: int | None = None,
+                      offset: int | None = None,
+                      search: str | None = None,
+                      role: str | None = None) -> List[Dict]:
+        """
+        only_active: None = all users, True = active only, False = inactive only.
+        """
+        conditions, params = [], []
+        if only_active is not None:
+            conditions.append("is_active = ?")
+            params.append(int(only_active))
+        if search:
+            conditions.append("(username LIKE ? OR full_name LIKE ?)")
+            params.extend([f'%{search}%', f'%{search}%'])
+        if role:
+            conditions.append("role = ?")
+            params.append(role)
 
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"SELECT * FROM {DB_TABLE_USER} {where} ORDER BY username"
+
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset or 0])
+
+        rows = self.db.__execute_fetchall__(query, tuple(params))
         if not rows:
             return []
-
         return [
-            {
-                **dict(row),
-                'is_active': bool(row['is_active']),
-                'use_2fa': bool(row['use_2fa'])
-            } for row in rows
+            {**dict(row), 'is_active': bool(row['is_active']), 'use_2fa': bool(row['use_2fa'])}
+            for row in rows
         ]
 
+    def count_users(self,
+                    only_active: bool | None = None,
+                    search: str | None = None,
+                    role: str | None = None) -> int:
+        conditions, params = [], []
+        if only_active is not None:
+            conditions.append("is_active = ?")
+            params.append(int(only_active))
+        if search:
+            conditions.append("(username LIKE ? OR full_name LIKE ?)")
+            params.extend([f'%{search}%', f'%{search}%'])
+        if role:
+            conditions.append("role = ?")
+            params.append(role)
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        row = self.db.__execute_fetch__(f"SELECT COUNT(*) AS cnt FROM {DB_TABLE_USER} {where}", tuple(params))
+        return row['cnt'] if row else 0
+
     def init_user_folders(self):
-        users = self.get_all_users()
+        users = self.get_all_users(only_active=True)
         if not users:
             return
         # --- 1. Створення папок INBOX ---

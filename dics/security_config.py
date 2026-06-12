@@ -16,3 +16,5 @@ AVAILABLE_MODULES:Final[dict[str, str]] = {
     MODULE_ADMIN: 'Адміністративна панель'
 }
 
+# Roles are managed in the DB (table: roles). AVAILABLE_ROLES is intentionally removed.
+

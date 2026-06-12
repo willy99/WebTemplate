@@ -16,3 +16,5 @@ dotenv
 plotly~=6.0.0
 pandas~=2.2.0
 regex
+anthropic
+pytest_asyncio

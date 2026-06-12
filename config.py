@@ -129,6 +129,9 @@ EXCEL_SUPPORT_COLOR: Final[str] = 'e8fffe'
 
 CHECK_INBOX_EVERY_SEC: Final[float] = 60.0 # перевіряти інбокс кожні ? секунд
 
+ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
+AI_CLAUDE_MODEL: str = os.getenv("AI_CLAUDE_MODEL", "claude-haiku-4-5-20251001")
+
 UI_SSL_KEYFILE: str | None = os.getenv("UI_SSL_KEYFILE")
 UI_SSL_CERTFILE: str | None = os.getenv("UI_SSL_CERTFILE")
 
