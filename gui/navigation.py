@@ -1,18 +1,16 @@
 from nicegui import ui, app
 from fastapi.responses import JSONResponse
 
-from dics.security_config import PERM_READ, PERM_EDIT, MODULE_SEARCH, MODULE_ADMIN, MODULE_TASK
+from dics.security_config import PERM_READ, PERM_EDIT, MODULE_SEARCH, MODULE_ADMIN
 from gui.components import AppMenu
 from gui.controllers.audit_controller import AuditController
 from gui.controllers.admin_audit_controller import AdminAuditController
-from gui.controllers.inbox_controller import InboxController
 from gui.controllers.config_controller import ConfigController
 from gui.controllers.user_controller import UserController
 from gui.views.pages.cv import render_cv_page
 from gui.views.pages import about
 from gui.views.home_view import render_home_page
 from gui.views.report.logs_view import render_logs_page
-from gui.views.inbox import inbox_triage_view
 from gui.views.admin.admin_permissions_view import render_permissions_page
 from gui.views.admin.admin_users_view import render_users_page
 from gui.views.admin.admin_settings_view import render_settings_page
@@ -39,13 +37,12 @@ def init_nicegui(workflow_obj):
     doc_templator = DocTemplator(templates_dir)
     auth_manager = AuthManager(workflow_obj)
 
-    inbox_ctrl = InboxController(workflow_obj, auth_manager)
     config_ctrl = ConfigController(workflow_obj, auth_manager)
     user_ctrl = UserController(workflow_obj, auth_manager)
     admin_audit_ctrl = AdminAuditController(workflow_obj, auth_manager)
     audit_ctrl = AuditController(workflow_obj, auth_manager)
 
-    app_menu = AppMenu(auth_manager, inbox_ctrl)
+    app_menu = AppMenu(auth_manager)
 
     create_login_page(auth_manager, user_ctrl, workflow_obj.log_manager)
 
@@ -62,13 +59,6 @@ def init_nicegui(workflow_obj):
         auth_manager=auth_manager,
         app_menu=app_menu,
     ))
-
-    @ui.page('/inbox')
-    @require_access(auth_manager, MODULE_TASK, PERM_READ)
-    def inbox_page():
-        ctx = auth_manager.get_current_context()
-        app_menu.render(auth_manager)
-        inbox_triage_view.render_inbox_page(inbox_ctrl, audit_ctrl, auth_manager)
 
     # Доступ ТІЛЬКИ для адмінів!
 

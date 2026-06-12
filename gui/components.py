@@ -2,7 +2,6 @@ from nicegui import app
 import urllib.parse
 
 from config import PROJECT_TITLE
-from gui.controllers.inbox_controller import InboxController
 from gui.services.auth_manager import AuthManager
 from dics.security_config import MODULE_REPORT_GENERAL, MODULE_ADMIN, PERM_READ, PERM_EDIT
 
@@ -15,9 +14,8 @@ from modules import menu_tree, render_header_widgets
 
 
 class AppMenu:
-    def __init__(self, auth_manager: AuthManager, inbox_controller: InboxController):
+    def __init__(self, auth_manager: AuthManager):
         self.auth_manager = auth_manager
-        self.inbox_ctrl = inbox_controller
 
     def render(self, auth_manager: AuthManager):
         dark = ui.dark_mode()
@@ -115,30 +113,7 @@ class AppMenu:
             # --- ПРАВА ЧАСТИНА ---
             with ui.row().classes('items-center gap-1 sm:gap-2 flex-nowrap'):
 
-                with ui.button(icon='mail', on_click=lambda: ui.navigate.to('/inbox')).props('flat round color="white"') as inbox_btn:
-                    badge_personal = ui.badge(color='red').props('floating rounded').classes('text-[10px] font-bold')
-                    badge_personal.set_visibility(False)
-                    badge_root = ui.badge(color='grey-5').props('floating rounded').classes('text-[10px] font-bold text-gray-800').style('top: auto; bottom: -4px;')
-                    badge_root.set_visibility(False)
-
-                    async def update_inbox():
-                        try:
-                            if not app.storage.user.get('authenticated'): return
-                            inbox_data = await run.io_bound(self.inbox_ctrl.get_user_inbox_messages, auth_manager.get_current_context())
-                            if not inbox_data: return
-
-                            p_count, r_count = len(inbox_data['personal_files']), len(inbox_data['root_files'])
-                            badge_personal.set_text(str(p_count))
-                            badge_personal.set_visibility(p_count > 0)
-                            badge_root.set_text(str(r_count))
-                            badge_root.set_visibility(r_count > 0)
-                        except Exception as e:
-                            pass
-
-                    ui.timer(config.CHECK_INBOX_EVERY_SEC, update_inbox)
-                    ui.timer(0.1, update_inbox, once=True)
-
-                # 🧩 Віджети хедера з модулів-фіч (бейджі, кнопки тощо)
+                # 🧩 Віджети хедера з модулів-фіч (mail badge, task badge, etc.)
                 render_header_widgets()
 
                 # ==========================================

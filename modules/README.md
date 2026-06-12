@@ -105,4 +105,5 @@ To remove a feature: delete the folder. Done.
 ## Current modules
 
 - **tasks** — full vertical slice: kanban board, editor, calendar, header badge (`MODULE_TASK`)
+- **inbox** — full vertical slice: inbox/outbox triage, file ops, mail badge in header (reuses `MODULE_TASK`)
 - **chat** — minimal example: one view + own translations (`MODULE_SEARCH`)
